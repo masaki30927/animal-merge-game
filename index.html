@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suika Style Prototype</title>
+  <link rel="stylesheet" href="styles.css?v=20260419-6">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="panel">
+      <div class="panel__body">
+        <aside class="sidebar">
+          <div class="sidebar__header">
+            <div>
+              <p class="eyebrow">Stage 1 Prototype</p>
+              <h1>Suika Style Game</h1>
+            </div>
+            <button id="restartButton" class="button" type="button">Restart</button>
+          </div>
+
+          <div class="hud">
+            <article class="stat-card">
+              <span class="stat-card__label">Score</span>
+              <strong id="scoreValue" class="stat-card__value">0</strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-card__label">Next</span>
+              <div class="next-piece">
+                <canvas id="nextCanvas" width="72" height="72" aria-label="Next piece preview"></canvas>
+              </div>
+            </article>
+            <article class="stat-card stat-card--tips">
+              <span class="stat-card__label">Controls</span>
+              <p>Move mouse to aim. Click to drop. Keep pieces below the red line.</p>
+            </article>
+          </div>
+        </aside>
+
+        <div class="game-column">
+          <div class="game-wrap">
+            <canvas
+              id="gameCanvas"
+              width="615"
+              height="1024"
+              aria-label="Playable Suika style game field"
+            ></canvas>
+
+            <div id="overlay" class="overlay overlay--hidden" aria-live="polite">
+              <div class="overlay__card">
+                <p class="overlay__eyebrow">Round Over</p>
+                <h2>Game Over</h2>
+                <p>Your stack stayed above the limit line for too long.</p>
+                <button id="overlayRestartButton" class="button" type="button">Play Again</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js?v=20260419-6"></script>
+</body>
+</html>
