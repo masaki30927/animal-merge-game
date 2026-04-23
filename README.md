@@ -1,12 +1,26 @@
-# Suika Style Prototype
+# Animal Merge Game
 
-This is a first-stage browser prototype of a Suika-style stacking game.
+Drop cute animal plushies, merge matching animals, and grow the biggest animal you can.
+This is a static browser game, so it can be published directly with GitHub Pages, Netlify, Vercel, or any static host.
 
 ## Run
 
 Open `index.html` in a desktop browser.
 
 If your browser blocks local file access for some reason, serve the folder with a tiny static server instead.
+
+## Publish
+
+To publish with GitHub Pages:
+
+1. Push this folder to GitHub.
+2. Open the repository's `Settings` -> `Pages`.
+3. Set `Source` to `Deploy from a branch`.
+4. Select `main` and `/ (root)`, then save.
+
+After GitHub finishes deploying, the game will be available at:
+
+`https://<username>.github.io/<repository-name>/`
 
 ## Controls
 
@@ -24,8 +38,14 @@ If your browser blocks local file access for some reason, serve the folder with 
 - Warning line based game-over logic
 - Restart flow
 
+## Scoring
+
+Merges get higher rewards as the animals grow:
+
+`50, 150, 300, 500, 750, 1050, 1400, 1800, 2250, 2750`
+
 ## Notes
 
-- The visuals use colored circles and labels instead of fruit art
+- The pieces are drawn as animal plush toys directly on the canvas
 - Physics are intentionally lightweight and tuned for a simple prototype
 - The structure is kept small so later steps can add polish and rules

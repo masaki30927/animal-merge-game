@@ -3,63 +3,89 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Suika Style Prototype</title>
-  <link rel="stylesheet" href="styles.css?v=20260419-6">
+  <meta http-equiv="Cache-Control" content="no-store">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="description" content="Drop cute animal plushies, merge matching animals, and grow the biggest animal you can.">
+  <meta name="theme-color" content="#ead995">
+  <meta property="og:title" content="Animal Merge Game">
+  <meta property="og:description" content="A browser-playable animal merging game with soft plush toy pieces.">
+  <title>Animal Merge Game</title>
+  <link rel="stylesheet" href="styles.css?v=20260423-2">
 </head>
 <body>
   <main class="app-shell">
-    <section class="panel">
-      <div class="panel__body">
-        <aside class="sidebar">
-          <div class="sidebar__header">
-            <div>
-              <p class="eyebrow">Stage 1 Prototype</p>
-              <h1>Suika Style Game</h1>
-            </div>
-            <button id="restartButton" class="button" type="button">Restart</button>
-          </div>
+    <section class="stage-screen" aria-label="Animal Merge Game">
+      <div class="score-bubble">
+        <span class="hud-title">Score</span>
+        <strong id="scoreValue" class="score-value">0</strong>
+        <span class="best-score">Best Score 0</span>
+      </div>
 
-          <div class="hud">
-            <article class="stat-card">
-              <span class="stat-card__label">Score</span>
-              <strong id="scoreValue" class="stat-card__value">0</strong>
-            </article>
-            <article class="stat-card">
-              <span class="stat-card__label">Next</span>
-              <div class="next-piece">
-                <canvas id="nextCanvas" width="72" height="72" aria-label="Next piece preview"></canvas>
-              </div>
-            </article>
-            <article class="stat-card stat-card--tips">
-              <span class="stat-card__label">Controls</span>
-              <p>Move mouse to aim. Click to drop. Keep pieces below the red line.</p>
-            </article>
-          </div>
-        </aside>
+      <aside class="ranking-card" aria-label="Score ranking">
+        <div class="ranking-card__header">
+          <span>L</span>
+          <strong>Animal Ranking</strong>
+          <span>R</span>
+        </div>
+        <form id="playerForm" class="ranking-card__profile">
+          <input id="playerNameInput" type="text" maxlength="12" autocomplete="nickname" aria-label="Player name">
+          <button class="button" type="submit">Set</button>
+        </form>
+        <ol id="leaderboardList">
+          <li><span>1</span><em>-----</em><strong>0</strong></li>
+          <li><span>2</span><em>-----</em><strong>0</strong></li>
+          <li><span>3</span><em>-----</em><strong>0</strong></li>
+        </ol>
+        <div class="ranking-card__now">
+          <span>Now</span>
+          <strong id="rankingScoreValue">0</strong>
+        </div>
+        <div class="ranking-card__rank">
+          <span>My Rank</span>
+          <strong id="playerRankValue">--</strong>
+        </div>
+      </aside>
 
-        <div class="game-column">
-          <div class="game-wrap">
-            <canvas
-              id="gameCanvas"
-              width="615"
-              height="1024"
-              aria-label="Playable Suika style game field"
-            ></canvas>
+      <div class="game-column">
+        <div class="mascot-cloud">drop</div>
+        <div class="game-wrap">
+          <canvas
+            id="gameCanvas"
+            width="480"
+            height="620"
+            aria-label="Animal Merge Game field"
+          ></canvas>
 
-            <div id="overlay" class="overlay overlay--hidden" aria-live="polite">
-              <div class="overlay__card">
-                <p class="overlay__eyebrow">Round Over</p>
-                <h2>Game Over</h2>
-                <p>Your stack stayed above the limit line for too long.</p>
-                <button id="overlayRestartButton" class="button" type="button">Play Again</button>
-              </div>
+          <div id="overlay" class="overlay overlay--hidden" aria-live="polite">
+            <div class="overlay__card">
+              <p class="overlay__eyebrow">Round Over</p>
+              <h2>Game Over</h2>
+              <p>Your stack stayed above the limit line for too long.</p>
+              <button id="overlayRestartButton" class="button" type="button">Play Again</button>
             </div>
           </div>
         </div>
       </div>
+
+      <aside class="next-bubble">
+        <span class="hud-title">Next</span>
+        <canvas id="nextCanvas" width="110" height="110" aria-label="Next piece preview"></canvas>
+      </aside>
+
+      <aside class="evolution-card">
+        <strong>Animal Ring</strong>
+        <canvas id="evolutionCanvas" width="170" height="170" aria-label="Piece evolution ring"></canvas>
+      </aside>
+
+      <div class="control-strip">
+        <span>Move</span>
+        <span>Drop</span>
+        <button id="restartButton" class="button" type="button">Restart</button>
+      </div>
     </section>
   </main>
 
-  <script src="app.js?v=20260419-6"></script>
+  <script src="app.js?v=20260423-8"></script>
 </body>
 </html>
