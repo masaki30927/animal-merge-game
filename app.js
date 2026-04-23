@@ -16,11 +16,69 @@
   const restartButton = document.getElementById("restartButton");
   const overlay = document.getElementById("overlay");
   const overlayRestartButton = document.getElementById("overlayRestartButton");
+  const languageButtons = [...document.querySelectorAll("[data-lang-option]")];
+  const translatedTextNodes = [...document.querySelectorAll("[data-i18n]")];
+  const translatedAriaNodes = [...document.querySelectorAll("[data-i18n-aria]")];
   const SCALE = canvas.height / 620;
   const STORAGE_KEYS = {
     bestScore: "animal-merge-best",
     player: "animal-merge-player",
-    leaderboard: "animal-merge-leaderboard"
+    leaderboard: "animal-merge-leaderboard",
+    language: "animal-merge-language"
+  };
+  const I18N = {
+    en: {
+      appLabel: "Animal Merge Game",
+      title: "Animal Merge Game",
+      description: "Drop cute animal plushies, merge matching animals, and grow the biggest animal you can.",
+      ogDescription: "A browser-playable animal merging game with soft plush toy pieces.",
+      score: "Score",
+      bestScore: "Best Score",
+      ranking: "Animal Ranking",
+      rankingLabel: "Score ranking",
+      playerName: "Player name",
+      setName: "Set",
+      now: "Now",
+      myRank: "My Rank",
+      gameField: "Animal Merge Game field",
+      roundOver: "Round Over",
+      gameOver: "Game Over",
+      gameOverCopy: "Your stack stayed above the limit line for too long.",
+      playAgain: "Play Again",
+      next: "Next",
+      nextPreview: "Next piece preview",
+      animalRing: "Animal Ring",
+      evolutionRing: "Piece evolution ring",
+      move: "Move",
+      drop: "Drop",
+      restart: "Restart"
+    },
+    ja: {
+      appLabel: "\u3069\u3046\u3076\u3064\u30de\u30fc\u30b8\u30b2\u30fc\u30e0",
+      title: "\u3069\u3046\u3076\u3064\u30de\u30fc\u30b8\u30b2\u30fc\u30e0",
+      description: "\u304b\u308f\u3044\u3044\u52d5\u7269\u3092\u843d\u3068\u3057\u3066\u3001\u540c\u3058\u52d5\u7269\u3069\u3046\u3057\u3092\u5408\u4f53\u3055\u305b\u308b\u30d6\u30e9\u30a6\u30b6\u30b2\u30fc\u30e0\u3067\u3059\u3002",
+      ogDescription: "\u3075\u308f\u3075\u308f\u306e\u52d5\u7269\u30d4\u30fc\u30b9\u3092\u80b2\u3066\u308b\u3001\u30b9\u30de\u30db\u5bfe\u5fdc\u306e\u30de\u30fc\u30b8\u30b2\u30fc\u30e0\u3002",
+      score: "\u30b9\u30b3\u30a2",
+      bestScore: "\u30d9\u30b9\u30c8",
+      ranking: "\u3069\u3046\u3076\u3064\u30e9\u30f3\u30ad\u30f3\u30b0",
+      rankingLabel: "\u30b9\u30b3\u30a2\u30e9\u30f3\u30ad\u30f3\u30b0",
+      playerName: "\u30d7\u30ec\u30a4\u30e4\u30fc\u540d",
+      setName: "\u8a2d\u5b9a",
+      now: "\u4eca",
+      myRank: "\u9806\u4f4d",
+      gameField: "\u3069\u3046\u3076\u3064\u30de\u30fc\u30b8\u30b2\u30fc\u30e0\u306e\u30d7\u30ec\u30a4\u30d5\u30a3\u30fc\u30eb\u30c9",
+      roundOver: "\u30e9\u30a6\u30f3\u30c9\u7d42\u4e86",
+      gameOver: "\u30b2\u30fc\u30e0\u30aa\u30fc\u30d0\u30fc",
+      gameOverCopy: "\u30d4\u30fc\u30b9\u304c\u30e9\u30a4\u30f3\u3092\u8d85\u3048\u305f\u72b6\u614b\u304c\u7d9a\u304d\u307e\u3057\u305f\u3002",
+      playAgain: "\u3082\u3046\u4e00\u5ea6",
+      next: "\u6b21",
+      nextPreview: "\u6b21\u306e\u30d4\u30fc\u30b9",
+      animalRing: "\u9032\u5316\u30ea\u30f3\u30b0",
+      evolutionRing: "\u30d4\u30fc\u30b9\u9032\u5316\u30ea\u30f3\u30b0",
+      move: "\u79fb\u52d5",
+      drop: "\u843d\u3068\u3059",
+      restart: "\u3084\u308a\u76f4\u3057"
+    }
   };
   const DEFAULT_LEADERBOARD = [
     { id: "seed-mika", name: "Mika", score: 8200 },
@@ -28,6 +86,61 @@
     { id: "seed-sora", name: "Sora", score: 5120 },
     { id: "seed-yui", name: "Yui", score: 3860 }
   ];
+  let currentLanguage = readPreferredLanguage();
+
+  function readPreferredLanguage() {
+    try {
+      const saved = window.localStorage.getItem(STORAGE_KEYS.language);
+      if (saved === "ja" || saved === "en") {
+        return saved;
+      }
+    } catch (error) {
+      // Language choice is still available for this session.
+    }
+
+    return window.navigator && /^ja\b/i.test(window.navigator.language) ? "ja" : "en";
+  }
+
+  function t(key) {
+    return I18N[currentLanguage][key] || I18N.en[key] || key;
+  }
+
+  function updateMetaContent(selector, value) {
+    const node = document.querySelector(selector);
+    if (node) {
+      node.setAttribute("content", value);
+    }
+  }
+
+  function applyLanguage(language) {
+    currentLanguage = language === "ja" ? "ja" : "en";
+
+    try {
+      window.localStorage.setItem(STORAGE_KEYS.language, currentLanguage);
+    } catch (error) {
+      // Saving the language preference is optional.
+    }
+
+    document.documentElement.lang = currentLanguage;
+    document.title = t("title");
+    updateMetaContent('meta[name="description"]', t("description"));
+    updateMetaContent('meta[property="og:title"]', t("title"));
+    updateMetaContent('meta[property="og:description"]', t("ogDescription"));
+
+    for (const node of translatedTextNodes) {
+      node.textContent = t(node.dataset.i18n);
+    }
+
+    for (const node of translatedAriaNodes) {
+      node.setAttribute("aria-label", t(node.dataset.i18nAria));
+    }
+
+    for (const button of languageButtons) {
+      const isActive = button.dataset.langOption === currentLanguage;
+      button.classList.toggle("language-switch__button--active", isActive);
+      button.setAttribute("aria-pressed", String(isActive));
+    }
+  }
 
   const GAME = {
     width: canvas.width,
@@ -780,7 +893,7 @@
       scoreValue.textContent = this.formatScore(this.score);
       rankingScoreValue.textContent = this.formatScore(this.score);
       if (bestScoreLabel) {
-        bestScoreLabel.textContent = `Best Score ${this.formatScore(this.bestScore)}`;
+        bestScoreLabel.textContent = `${t("bestScore")} ${this.formatScore(this.bestScore)}`;
       }
       this.renderLeaderboard();
       this.renderNextPiece();
@@ -2130,7 +2243,7 @@
     }
 
     formatScore(value) {
-      return value.toLocaleString("en-US");
+      return value.toLocaleString(currentLanguage === "ja" ? "ja-JP" : "en-US");
     }
 
     lighten(hex, amount) {
@@ -2176,6 +2289,9 @@
     left: false,
     right: false
   };
+  let activeTouchPointerId = null;
+  let suppressNextClick = false;
+  applyLanguage(currentLanguage);
   game.renderHud();
 
   function updatePointer(clientX) {
@@ -2215,17 +2331,43 @@
     updatePointer(event.clientX);
   }
 
-  function handlePointerDrop(event) {
+  function handlePointerDown(event) {
     if (event.target.closest("button")) {
       return;
     }
 
     if (event.pointerType === "touch") {
       event.preventDefault();
+      activeTouchPointerId = event.pointerId;
+      suppressNextClick = true;
+      updatePointer(event.clientX);
+      try {
+        gameColumn.setPointerCapture(event.pointerId);
+      } catch (error) {
+        // Pointer capture is not available in every embedded browser.
+      }
+      return;
     }
 
     updatePointer(event.clientX);
     game.dropCurrentPiece(performance.now());
+  }
+
+  function handlePointerUp(event) {
+    if (event.pointerType !== "touch" || activeTouchPointerId !== event.pointerId) {
+      return;
+    }
+
+    event.preventDefault();
+    activeTouchPointerId = null;
+    updatePointer(event.clientX);
+    game.dropCurrentPiece(performance.now());
+  }
+
+  function handlePointerCancel(event) {
+    if (activeTouchPointerId === event.pointerId) {
+      activeTouchPointerId = null;
+    }
   }
 
   function loop(timestamp) {
@@ -2243,14 +2385,29 @@
   }
 
   gameColumn.addEventListener("pointermove", handlePointerAim, { passive: false });
-  gameColumn.addEventListener("pointerdown", handlePointerDrop, { passive: false });
+  gameColumn.addEventListener("pointerdown", handlePointerDown, { passive: false });
+  gameColumn.addEventListener("pointerup", handlePointerUp, { passive: false });
+  gameColumn.addEventListener("pointercancel", handlePointerCancel);
   gameColumn.addEventListener("click", (event) => {
+    if (suppressNextClick) {
+      suppressNextClick = false;
+      event.preventDefault();
+      return;
+    }
+
     if (event.pointerType) {
       return;
     }
 
     handleAimAndDrop(event);
   });
+
+  for (const button of languageButtons) {
+    button.addEventListener("click", () => {
+      applyLanguage(button.dataset.langOption);
+      game.renderHud();
+    });
+  }
 
   restartButton.addEventListener("click", () => {
     game.reset();

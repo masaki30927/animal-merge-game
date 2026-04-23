@@ -11,26 +11,31 @@
   <meta property="og:title" content="Animal Merge Game">
   <meta property="og:description" content="A browser-playable animal merging game with soft plush toy pieces.">
   <title>Animal Merge Game</title>
-  <link rel="stylesheet" href="styles.css?v=20260423-2">
+  <link rel="stylesheet" href="styles.css?v=20260423-3">
 </head>
 <body>
   <main class="app-shell">
-    <section class="stage-screen" aria-label="Animal Merge Game">
+    <section class="stage-screen" aria-label="Animal Merge Game" data-i18n-aria="appLabel">
+      <div class="language-switch" role="group" aria-label="Language">
+        <button class="language-switch__button" type="button" data-lang-option="ja">JP</button>
+        <button class="language-switch__button" type="button" data-lang-option="en">EN</button>
+      </div>
+
       <div class="score-bubble">
-        <span class="hud-title">Score</span>
+        <span class="hud-title" data-i18n="score">Score</span>
         <strong id="scoreValue" class="score-value">0</strong>
         <span class="best-score">Best Score 0</span>
       </div>
 
-      <aside class="ranking-card" aria-label="Score ranking">
+      <aside class="ranking-card" aria-label="Score ranking" data-i18n-aria="rankingLabel">
         <div class="ranking-card__header">
           <span>L</span>
-          <strong>Animal Ranking</strong>
+          <strong data-i18n="ranking">Animal Ranking</strong>
           <span>R</span>
         </div>
         <form id="playerForm" class="ranking-card__profile">
-          <input id="playerNameInput" type="text" maxlength="12" autocomplete="nickname" aria-label="Player name">
-          <button class="button" type="submit">Set</button>
+          <input id="playerNameInput" type="text" maxlength="12" autocomplete="nickname" aria-label="Player name" data-i18n-aria="playerName">
+          <button class="button" type="submit" data-i18n="setName">Set</button>
         </form>
         <ol id="leaderboardList">
           <li><span>1</span><em>-----</em><strong>0</strong></li>
@@ -38,11 +43,11 @@
           <li><span>3</span><em>-----</em><strong>0</strong></li>
         </ol>
         <div class="ranking-card__now">
-          <span>Now</span>
+          <span data-i18n="now">Now</span>
           <strong id="rankingScoreValue">0</strong>
         </div>
         <div class="ranking-card__rank">
-          <span>My Rank</span>
+          <span data-i18n="myRank">My Rank</span>
           <strong id="playerRankValue">--</strong>
         </div>
       </aside>
@@ -55,37 +60,38 @@
             width="480"
             height="620"
             aria-label="Animal Merge Game field"
+            data-i18n-aria="gameField"
           ></canvas>
 
           <div id="overlay" class="overlay overlay--hidden" aria-live="polite">
             <div class="overlay__card">
-              <p class="overlay__eyebrow">Round Over</p>
-              <h2>Game Over</h2>
-              <p>Your stack stayed above the limit line for too long.</p>
-              <button id="overlayRestartButton" class="button" type="button">Play Again</button>
+              <p class="overlay__eyebrow" data-i18n="roundOver">Round Over</p>
+              <h2 data-i18n="gameOver">Game Over</h2>
+              <p data-i18n="gameOverCopy">Your stack stayed above the limit line for too long.</p>
+              <button id="overlayRestartButton" class="button" type="button" data-i18n="playAgain">Play Again</button>
             </div>
           </div>
         </div>
       </div>
 
       <aside class="next-bubble">
-        <span class="hud-title">Next</span>
-        <canvas id="nextCanvas" width="110" height="110" aria-label="Next piece preview"></canvas>
+        <span class="hud-title" data-i18n="next">Next</span>
+        <canvas id="nextCanvas" width="110" height="110" aria-label="Next piece preview" data-i18n-aria="nextPreview"></canvas>
       </aside>
 
       <aside class="evolution-card">
-        <strong>Animal Ring</strong>
-        <canvas id="evolutionCanvas" width="170" height="170" aria-label="Piece evolution ring"></canvas>
+        <strong data-i18n="animalRing">Animal Ring</strong>
+        <canvas id="evolutionCanvas" width="170" height="170" aria-label="Piece evolution ring" data-i18n-aria="evolutionRing"></canvas>
       </aside>
 
       <div class="control-strip">
-        <span>Move</span>
-        <span>Drop</span>
-        <button id="restartButton" class="button" type="button">Restart</button>
+        <span data-i18n="move">Move</span>
+        <span data-i18n="drop">Drop</span>
+        <button id="restartButton" class="button" type="button" data-i18n="restart">Restart</button>
       </div>
     </section>
   </main>
 
-  <script src="app.js?v=20260423-8"></script>
+  <script src="app.js?v=20260423-9"></script>
 </body>
 </html>
