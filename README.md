@@ -15,8 +15,8 @@ To publish with GitHub Pages:
 
 1. Push this folder to GitHub.
 2. Open the repository's `Settings` -> `Pages`.
-3. Set `Source` to `Deploy from a branch`.
-4. Select `main` and `/ (root)`, then save.
+3. Set `Source` to `GitHub Actions`.
+4. Run the `Publish static game` workflow if it does not start automatically.
 
 After GitHub finishes deploying, the game will be available at:
 
