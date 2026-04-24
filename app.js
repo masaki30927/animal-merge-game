@@ -3,12 +3,17 @@
   const ctx = canvas.getContext("2d");
   const nextCanvas = document.getElementById("nextCanvas");
   const nextCtx = nextCanvas.getContext("2d");
+  const queueCanvas = document.getElementById("queueCanvas");
+  const queueCtx = queueCanvas ? queueCanvas.getContext("2d") : null;
   const evolutionCanvas = document.getElementById("evolutionCanvas");
   const evolutionCtx = evolutionCanvas.getContext("2d");
   const gameColumn = document.querySelector(".game-column");
+  const comboBadge = document.getElementById("comboBadge");
   const scoreValue = document.getElementById("scoreValue");
   const rankingScoreValue = document.getElementById("rankingScoreValue");
   const bestScoreLabel = document.querySelector(".best-score");
+  const highestAnimalValue = document.getElementById("highestAnimalValue");
+  const progressValue = document.getElementById("progressValue");
   const leaderboardList = document.getElementById("leaderboardList");
   const playerForm = document.getElementById("playerForm");
   const playerNameInput = document.getElementById("playerNameInput");
@@ -16,6 +21,9 @@
   const restartButton = document.getElementById("restartButton");
   const overlay = document.getElementById("overlay");
   const overlayRestartButton = document.getElementById("overlayRestartButton");
+  const overlayScoreValue = document.getElementById("overlayScoreValue");
+  const overlayBestValue = document.getElementById("overlayBestValue");
+  const overlayHighestValue = document.getElementById("overlayHighestValue");
   const languageButtons = [...document.querySelectorAll("[data-lang-option]")];
   const translatedTextNodes = [...document.querySelectorAll("[data-i18n]")];
   const translatedAriaNodes = [...document.querySelectorAll("[data-i18n-aria]")];
@@ -47,8 +55,28 @@
       playAgain: "Play Again",
       next: "Next",
       nextPreview: "Next piece preview",
+      afterNext: "After",
+      afterNextPreview: "After next piece preview",
       animalRing: "Animal Ring",
       evolutionRing: "Piece evolution ring",
+      highest: "Highest",
+      progress: "Progress",
+      finalScore: "Final Score",
+      topAnimal: "Top Animal",
+      combo: "Combo",
+      danger: "Danger",
+      newBest: "New Best",
+      pieceRabbit: "Rabbit",
+      pieceCat: "Cat",
+      pieceDog: "Dog",
+      piecePenguin: "Penguin",
+      pieceElephant: "Elephant",
+      piecePanda: "Panda",
+      pieceOtter: "Otter",
+      pieceHedgehog: "Hedgehog",
+      pieceFox: "Fox",
+      pieceKoala: "Koala",
+      pieceLion: "Lion",
       move: "Move",
       drop: "Drop",
       restart: "Restart"
@@ -73,8 +101,28 @@
       playAgain: "\u3082\u3046\u4e00\u5ea6",
       next: "\u6b21",
       nextPreview: "\u6b21\u306e\u30d4\u30fc\u30b9",
+      afterNext: "\u305d\u306e\u6b21",
+      afterNextPreview: "\u305d\u306e\u6b21\u306e\u30d4\u30fc\u30b9",
       animalRing: "\u9032\u5316\u30ea\u30f3\u30b0",
       evolutionRing: "\u30d4\u30fc\u30b9\u9032\u5316\u30ea\u30f3\u30b0",
+      highest: "\u6700\u9ad8",
+      progress: "\u9032\u6357",
+      finalScore: "\u6700\u7d42\u30b9\u30b3\u30a2",
+      topAnimal: "\u6700\u5927\u3069\u3046\u3076\u3064",
+      combo: "\u30b3\u30f3\u30dc",
+      danger: "\u30ad\u30b1\u30f3",
+      newBest: "\u30d9\u30b9\u30c8\u66f4\u65b0",
+      pieceRabbit: "\u3046\u3055\u304e",
+      pieceCat: "\u306d\u3053",
+      pieceDog: "\u3044\u306c",
+      piecePenguin: "\u30da\u30f3\u30ae\u30f3",
+      pieceElephant: "\u305e\u3046",
+      piecePanda: "\u30d1\u30f3\u30c0",
+      pieceOtter: "\u30e9\u30c3\u30b3",
+      pieceHedgehog: "\u30cf\u30ea\u30cd\u30ba\u30df",
+      pieceFox: "\u304d\u3064\u306d",
+      pieceKoala: "\u30b3\u30a2\u30e9",
+      pieceLion: "\u30e9\u30a4\u30aa\u30f3",
       move: "\u79fb\u52d5",
       drop: "\u843d\u3068\u3059",
       restart: "\u3084\u308a\u76f4\u3057"
@@ -167,6 +215,8 @@
     keyboardAimSpeed: 0.42 * SCALE,
     spawnCooldownMs: 480,
     gameOverMs: 1600,
+    comboWindowMs: 1550,
+    milestoneEffectMs: 1300,
     fixedDt: 1000 / 60,
     substeps: 2,
     solverPasses: 6
@@ -363,6 +413,12 @@
       this.mergeFlash = 0;
       this.previewType = this.randomSpawnType();
       this.nextType = this.randomSpawnType();
+      this.queueType = this.randomSpawnType();
+      this.highestTypeReached = this.previewType;
+      this.comboCount = 0;
+      this.comboTimerMs = 0;
+      this.comboFlash = 0;
+      this.milestone = null;
     }
 
     reset() {
@@ -379,6 +435,12 @@
       this.mergeFlash = 0;
       this.previewType = this.randomSpawnType();
       this.nextType = this.randomSpawnType();
+      this.queueType = this.randomSpawnType();
+      this.highestTypeReached = this.previewType;
+      this.comboCount = 0;
+      this.comboTimerMs = 0;
+      this.comboFlash = 0;
+      this.milestone = null;
       this.pointerX = GAME.width / 2;
       this.renderHud();
       this.hideOverlay();
@@ -428,7 +490,9 @@
       });
 
       this.previewType = this.nextType;
-      this.nextType = this.randomSpawnType();
+      this.nextType = this.queueType;
+      this.queueType = this.randomSpawnType();
+      this.recordHighestType(typeIndex);
       this.lastDropAt = now;
       this.vibrate(4);
       this.renderHud();
@@ -642,6 +706,7 @@
             b.hasClearedWarningLine ||
             mergeY - piece.radius > GAME.warningLineY + GAME.dangerLineGrace
         });
+        this.recordHighestType(nextTypeIndex, mergeX, mergeY);
 
         this.score += awardedScore;
         const isNewBest = this.updateBestScore();
@@ -659,11 +724,52 @@
         }
       }
 
+      this.registerCombo(merges.length);
       this.renderHud();
     }
 
     getMergeScore(typeIndex) {
       return MERGE_SCORES[typeIndex] ?? 0;
+    }
+
+    recordHighestType(typeIndex, x = null, y = null) {
+      if (typeIndex <= this.highestTypeReached) {
+        return;
+      }
+
+      this.highestTypeReached = typeIndex;
+
+      if (x !== null && y !== null) {
+        this.milestone = {
+          typeIndex,
+          x,
+          y,
+          age: 0,
+          duration: GAME.milestoneEffectMs
+        };
+        this.shakePower = Math.max(this.shakePower, 5.5 * SCALE);
+      }
+    }
+
+    getHighestTypeLabel() {
+      const typeIndex = Math.max(0, Math.min(PIECES.length - 1, this.highestTypeReached));
+      const piece = PIECES[typeIndex];
+      const key = `piece${piece.name.charAt(0).toUpperCase()}${piece.name.slice(1)}`;
+      return t(key);
+    }
+
+    getProgressLabel() {
+      return `${Math.max(1, this.highestTypeReached + 1)} / ${PIECES.length}`;
+    }
+
+    registerCombo(mergeCount) {
+      if (mergeCount <= 0) {
+        return;
+      }
+
+      this.comboCount = this.comboTimerMs > 0 ? this.comboCount + mergeCount : mergeCount;
+      this.comboTimerMs = GAME.comboWindowMs;
+      this.comboFlash = this.comboCount > 1 ? 1 : 0;
     }
 
     updateBestScore() {
@@ -837,6 +943,23 @@
       this.mergeFlash = Math.max(0, this.mergeFlash - deltaMs / 220);
       this.scorePulse = Math.max(0, this.scorePulse - deltaMs / 260);
       this.bestPulse = Math.max(0, this.bestPulse - deltaMs / 560);
+      this.comboFlash = Math.max(0, this.comboFlash - deltaMs / 240);
+
+      if (this.comboTimerMs > 0) {
+        this.comboTimerMs = Math.max(0, this.comboTimerMs - deltaMs);
+        if (this.comboTimerMs === 0) {
+          this.comboCount = 0;
+        }
+      }
+
+      if (this.milestone) {
+        this.milestone.age += deltaMs;
+        if (this.milestone.age >= this.milestone.duration) {
+          this.milestone = null;
+        }
+      }
+
+      this.renderComboBadge();
     }
 
     updateEffects(deltaMs) {
@@ -874,9 +997,9 @@
 
         if (ball.hasClearedWarningLine && ball.y - ball.radius <= GAME.warningLineY) {
           ball.warningTimer += deltaMs;
-        if (ball.warningTimer >= GAME.gameOverMs) {
-          triggeredGameOver = true;
-        }
+          if (ball.warningTimer >= GAME.gameOverMs) {
+            triggeredGameOver = true;
+          }
         } else {
           ball.warningTimer = 0;
         }
@@ -885,6 +1008,7 @@
       if (triggeredGameOver) {
         this.gameOver = true;
         this.vibrate([18, 36, 24]);
+        this.renderOverlayStats();
         this.showOverlay();
       }
     }
@@ -895,9 +1019,17 @@
       if (bestScoreLabel) {
         bestScoreLabel.textContent = `${t("bestScore")} ${this.formatScore(this.bestScore)}`;
       }
+      if (highestAnimalValue) {
+        highestAnimalValue.textContent = this.getHighestTypeLabel();
+      }
+      if (progressValue) {
+        progressValue.textContent = this.getProgressLabel();
+      }
       this.renderLeaderboard();
       this.renderNextPiece();
       this.renderEvolutionRing();
+      this.renderOverlayStats();
+      this.renderComboBadge();
     }
 
     renderLeaderboard() {
@@ -949,6 +1081,49 @@
         piece.color,
         piece.name
       );
+
+      if (queueCtx && queueCanvas) {
+        queueCtx.clearRect(0, 0, queueCanvas.width, queueCanvas.height);
+        const queuedPiece = PIECES[this.nextType];
+        const queuedScale = Math.min(1, 18 / queuedPiece.radius);
+        this.drawPiece(
+          queueCtx,
+          queueCanvas.width / 2,
+          queueCanvas.height / 2,
+          queuedPiece.radius * queuedScale,
+          queuedPiece.color,
+          queuedPiece.name
+        );
+      }
+    }
+
+    renderOverlayStats() {
+      if (overlayScoreValue) {
+        overlayScoreValue.textContent = this.formatScore(this.score);
+      }
+      if (overlayBestValue) {
+        overlayBestValue.textContent = this.formatScore(this.bestScore);
+      }
+      if (overlayHighestValue) {
+        overlayHighestValue.textContent = this.getHighestTypeLabel();
+      }
+    }
+
+    renderComboBadge() {
+      if (!comboBadge) {
+        return;
+      }
+
+      const visible = this.comboCount > 1 && this.comboTimerMs > 0;
+      comboBadge.classList.toggle("combo-badge--hidden", !visible);
+
+      if (!visible) {
+        comboBadge.style.transform = "";
+        return;
+      }
+
+      comboBadge.textContent = `${this.comboCount} ${t("combo")}`;
+      comboBadge.style.transform = `translateX(-50%) scale(${1 + this.comboFlash * 0.12})`;
     }
 
     renderEvolutionRing() {
@@ -1006,6 +1181,7 @@
       }
 
       this.drawEffects();
+      this.drawMilestoneEffect();
       ctx.restore();
       this.drawRewardHud();
       this.drawMergeFlash();
@@ -1213,8 +1389,8 @@
         ctx.font = `700 ${16 * SCALE}px "Trebuchet MS"`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.strokeText("DANGER", GAME.width / 2, GAME.warningLineY - 26 * SCALE);
-        ctx.fillText("DANGER", GAME.width / 2, GAME.warningLineY - 26 * SCALE);
+        ctx.strokeText(t("danger"), GAME.width / 2, GAME.warningLineY - 26 * SCALE);
+        ctx.fillText(t("danger"), GAME.width / 2, GAME.warningLineY - 26 * SCALE);
       }
 
       ctx.restore();
@@ -1248,7 +1424,7 @@
         ctx.font = `800 ${12 * SCALE}px "Trebuchet MS"`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText("NEW BEST", GAME.width / 2, y + badgeHeight / 2 + SCALE);
+        ctx.fillText(t("newBest"), GAME.width / 2, y + badgeHeight / 2 + SCALE);
       }
 
       if (hasPulse) {
@@ -1267,21 +1443,85 @@
       const x = this.clampSpawnX(this.previewType, this.pointerX);
       const piece = PIECES[this.previewType];
       const y = this.getSpawnY(this.previewType);
+      const landingY = this.getProjectedLandingY(this.previewType, x);
       const pulse = 0.85 + Math.sin(now * 0.006) * 0.08;
+      const cooldownProgress = Math.max(0, Math.min(1, (now - this.lastDropAt) / GAME.spawnCooldownMs));
 
       ctx.save();
-      ctx.strokeStyle = "rgba(113, 64, 24, 0.25)";
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = cooldownProgress >= 1 ? "rgba(113, 64, 24, 0.25)" : "rgba(113, 64, 24, 0.14)";
+      ctx.lineWidth = 2 * SCALE;
       ctx.setLineDash([6, 8]);
       ctx.beginPath();
       ctx.moveTo(x, GAME.topY - 18 * SCALE);
-      ctx.lineTo(x, GAME.floorY - GAME.height * 0.028);
+      ctx.lineTo(x, landingY + piece.radius * 0.45);
       ctx.stroke();
       ctx.setLineDash([]);
 
+      ctx.globalAlpha = this.gameOver ? 0.2 : 0.46;
+      const shadowGradient = ctx.createRadialGradient(
+        x,
+        landingY + piece.radius * 0.66,
+        2,
+        x,
+        landingY + piece.radius * 0.66,
+        piece.radius * 1.28
+      );
+      shadowGradient.addColorStop(0, "rgba(103, 76, 54, 0.22)");
+      shadowGradient.addColorStop(1, "rgba(103, 76, 54, 0)");
+      ctx.fillStyle = shadowGradient;
+      ctx.beginPath();
+      ctx.ellipse(x, landingY + piece.radius * 0.72, piece.radius * 1.1, piece.radius * 0.28, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.globalAlpha = this.gameOver ? 0.2 : 0.42;
+      ctx.strokeStyle = "rgba(255, 250, 225, 0.88)";
+      ctx.lineWidth = 3 * SCALE;
+      ctx.beginPath();
+      ctx.arc(x, landingY, piece.radius * 1.02, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(123, 102, 79, 0.22)";
+      ctx.lineWidth = 1.5 * SCALE;
+      ctx.beginPath();
+      ctx.arc(x, landingY, piece.radius * 1.02, 0, Math.PI * 2);
+      ctx.stroke();
+
       ctx.globalAlpha = this.gameOver ? 0.35 : 0.55;
       this.drawPiece(ctx, x, y, piece.radius * pulse, piece.color, piece.name);
+
+      if (cooldownProgress < 1) {
+        ctx.globalAlpha = 0.78;
+        ctx.strokeStyle = "rgba(255, 248, 221, 0.92)";
+        ctx.lineWidth = 3 * SCALE;
+        ctx.beginPath();
+        ctx.arc(x, y, piece.radius * 1.28, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * cooldownProgress);
+        ctx.stroke();
+      }
+
       ctx.restore();
+    }
+
+    getProjectedLandingY(typeIndex, x) {
+      const radius = PIECES[typeIndex].radius;
+      const spawnY = this.getSpawnY(typeIndex);
+      let landingY = GAME.floorY - radius;
+
+      for (const ball of this.balls) {
+        const dx = Math.abs(ball.x - x);
+        const minDistance = ball.radius + radius;
+
+        if (dx >= minDistance) {
+          continue;
+        }
+
+        const verticalOffset = Math.sqrt(minDistance * minDistance - dx * dx);
+        const candidateY = ball.y - verticalOffset;
+
+        if (candidateY >= spawnY && candidateY < landingY) {
+          landingY = candidateY;
+        }
+      }
+
+      return Math.max(spawnY, landingY);
     }
 
     drawPiece(targetCtx, x, y, radius, color, label) {
@@ -2196,6 +2436,45 @@
       }
     }
 
+    drawMilestoneEffect() {
+      if (!this.milestone) {
+        return;
+      }
+
+      const progress = Math.min(1, this.milestone.age / this.milestone.duration);
+      const alpha = 1 - progress;
+      const piece = PIECES[this.milestone.typeIndex];
+      const label = this.getHighestTypeLabel();
+      const y = this.milestone.y - piece.radius * (1.05 + progress * 0.95);
+      const burstRadius = piece.radius * (1.25 + progress * 0.95);
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = "rgba(255, 246, 186, 0.88)";
+      ctx.lineWidth = 4 * SCALE;
+      ctx.beginPath();
+      ctx.arc(this.milestone.x, this.milestone.y, burstRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      for (let i = 0; i < 10; i += 1) {
+        const angle = -Math.PI / 2 + (Math.PI * 2 * i) / 10 + progress * 0.8;
+        const starX = this.milestone.x + Math.cos(angle) * burstRadius;
+        const starY = this.milestone.y + Math.sin(angle) * burstRadius;
+        const starRadius = Math.max(5, piece.radius * 0.12) * (1 - progress * 0.25);
+        this.drawStar(ctx, starX, starY, starRadius, i % 2 ? piece.belly : "#f5d866");
+      }
+
+      ctx.font = `900 ${Math.max(15, piece.radius * 0.28)}px "Trebuchet MS"`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineWidth = 4 * SCALE;
+      ctx.strokeStyle = "rgba(91, 69, 48, 0.38)";
+      ctx.fillStyle = "rgba(255, 249, 226, 0.98)";
+      ctx.strokeText(label, this.milestone.x, y);
+      ctx.fillText(label, this.milestone.x, y);
+      ctx.restore();
+    }
+
     roundRect(targetCtx, x, y, width, height, radius) {
       const r = Math.min(radius, width / 2, height / 2);
       targetCtx.beginPath();
@@ -2276,6 +2555,7 @@
     }
 
     showOverlay() {
+      this.renderOverlayStats();
       overlay.classList.remove("overlay--hidden");
     }
 

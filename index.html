@@ -11,7 +11,7 @@
   <meta property="og:title" content="Animal Merge Game">
   <meta property="og:description" content="A browser-playable animal merging game with soft plush toy pieces.">
   <title>Animal Merge Game</title>
-  <link rel="stylesheet" href="styles.css?v=20260423-3">
+  <link rel="stylesheet" href="styles.css?v=20260424-2">
 </head>
 <body>
   <main class="app-shell">
@@ -54,6 +54,7 @@
 
       <div class="game-column">
         <div class="mascot-cloud">drop</div>
+        <div id="comboBadge" class="combo-badge combo-badge--hidden" aria-live="polite"></div>
         <div class="game-wrap">
           <canvas
             id="gameCanvas"
@@ -68,6 +69,20 @@
               <p class="overlay__eyebrow" data-i18n="roundOver">Round Over</p>
               <h2 data-i18n="gameOver">Game Over</h2>
               <p data-i18n="gameOverCopy">Your stack stayed above the limit line for too long.</p>
+              <div class="overlay__stats">
+                <div class="overlay__stat">
+                  <span data-i18n="finalScore">Final Score</span>
+                  <strong id="overlayScoreValue">0</strong>
+                </div>
+                <div class="overlay__stat">
+                  <span data-i18n="bestScore">Best Score</span>
+                  <strong id="overlayBestValue">0</strong>
+                </div>
+                <div class="overlay__stat">
+                  <span data-i18n="topAnimal">Top Animal</span>
+                  <strong id="overlayHighestValue">Rabbit</strong>
+                </div>
+              </div>
               <button id="overlayRestartButton" class="button" type="button" data-i18n="playAgain">Play Again</button>
             </div>
           </div>
@@ -77,11 +92,25 @@
       <aside class="next-bubble">
         <span class="hud-title" data-i18n="next">Next</span>
         <canvas id="nextCanvas" width="110" height="110" aria-label="Next piece preview" data-i18n-aria="nextPreview"></canvas>
+        <div class="next-bubble__queue">
+          <span class="next-bubble__queue-label" data-i18n="afterNext">After</span>
+          <canvas id="queueCanvas" width="72" height="72" aria-label="After next piece preview" data-i18n-aria="afterNextPreview"></canvas>
+        </div>
       </aside>
 
       <aside class="evolution-card">
         <strong data-i18n="animalRing">Animal Ring</strong>
         <canvas id="evolutionCanvas" width="170" height="170" aria-label="Piece evolution ring" data-i18n-aria="evolutionRing"></canvas>
+        <div class="evolution-card__status">
+          <div class="evolution-card__chip">
+            <span data-i18n="highest">Highest</span>
+            <strong id="highestAnimalValue">Rabbit</strong>
+          </div>
+          <div class="evolution-card__chip">
+            <span data-i18n="progress">Progress</span>
+            <strong id="progressValue">1 / 11</strong>
+          </div>
+        </div>
       </aside>
 
       <div class="control-strip">
@@ -92,6 +121,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20260423-9"></script>
+  <script src="app.js?v=20260424-2"></script>
 </body>
 </html>

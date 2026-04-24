@@ -403,6 +403,36 @@ canvas {
   aspect-ratio: 480 / 620;
 }
 
+.combo-badge {
+  top: 7.5%;
+  left: 50%;
+  transform: translateX(-50%) scale(1);
+  min-width: 124px;
+  min-height: 40px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 251, 233, 0.96), rgba(244, 219, 168, 0.9));
+  border: 2px solid rgba(255, 255, 255, 0.68);
+  color: #7e5a32;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-align: center;
+  box-shadow:
+    inset 0 0 0 1px rgba(164, 119, 62, 0.16),
+    0 12px 24px rgba(103, 79, 54, 0.18);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+  z-index: 3;
+}
+
+.combo-badge--hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-8px) scale(0.92);
+  pointer-events: none;
+}
+
 #gameCanvas {
   width: 100%;
   height: 100%;
@@ -415,13 +445,36 @@ canvas {
   font-size: 1.38rem;
 }
 
+.next-bubble__queue {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  margin-top: -18px;
+}
+
+.next-bubble__queue-label {
+  font-size: 0.64rem;
+  font-weight: 800;
+  color: rgba(111, 94, 77, 0.88);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+#queueCanvas {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.34);
+  box-shadow: inset 0 0 0 1px rgba(125, 109, 92, 0.14);
+}
+
 .evolution-card {
   right: 8.9%;
   bottom: 16%;
   display: grid;
   place-items: center;
   width: 202px;
-  height: 176px;
+  height: 210px;
   padding-top: 8px;
   border-radius: 24px;
   background:
@@ -442,6 +495,41 @@ canvas {
   width: 158px;
   height: 158px;
   margin-top: -10px;
+}
+
+.evolution-card__status {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: calc(100% - 22px);
+  margin-top: -10px;
+}
+
+.evolution-card__chip {
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.48);
+  box-shadow: inset 0 0 0 1px rgba(108, 136, 112, 0.14);
+  text-align: center;
+}
+
+.evolution-card__chip span {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(97, 117, 102, 0.88);
+}
+
+.evolution-card__chip strong {
+  display: block;
+  margin-top: 3px;
+  color: #fdf8ea;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  -webkit-text-stroke: 0.8px rgba(83, 72, 60, 0.22);
 }
 
 .control-strip {
@@ -515,6 +603,30 @@ h2 {
   line-height: 1.5;
 }
 
+.overlay__stats {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 16px;
+}
+
+.overlay__stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.56);
+  color: #7a6550;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.overlay__stat strong {
+  color: #66594d;
+  font-size: 1rem;
+}
+
 @media (max-width: 760px) {
   body {
     overflow: hidden;
@@ -586,10 +698,32 @@ h2 {
     margin-top: -6px;
   }
 
+  .next-bubble__queue {
+    margin-top: -8px;
+  }
+
+  .next-bubble__queue-label {
+    font-size: 0.52rem;
+  }
+
+  #queueCanvas {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+  }
+
   .game-column {
     top: calc(max(10px, env(safe-area-inset-top)) + 78px);
     width: min(calc(100dvw - 36px), calc((100dvh - 252px) * 480 / 620), 370px);
     height: auto;
+  }
+
+  .combo-badge {
+    top: 2px;
+    min-width: 108px;
+    min-height: 34px;
+    padding: 6px 14px;
+    font-size: 0.84rem;
   }
 
   .mascot-cloud {
@@ -656,7 +790,7 @@ h2 {
     right: 8px;
     bottom: calc(54px + env(safe-area-inset-bottom));
     width: calc(50dvw - 18px);
-    height: 112px;
+    height: 150px;
   }
 
   .evolution-card strong {
@@ -667,6 +801,27 @@ h2 {
     width: 92px;
     height: 92px;
     margin-top: -8px;
+  }
+
+  .evolution-card__status {
+    width: calc(100% - 12px);
+    gap: 6px;
+    margin-top: -2px;
+  }
+
+  .evolution-card__chip {
+    padding: 6px;
+    border-radius: 14px;
+  }
+
+  .evolution-card__chip span {
+    font-size: 0.5rem;
+  }
+
+  .evolution-card__chip strong {
+    margin-top: 2px;
+    font-size: 0.62rem;
+    -webkit-text-stroke: 0;
   }
 
   .control-strip {
@@ -682,6 +837,20 @@ h2 {
   .button {
     min-height: 32px;
     padding: 6px 14px;
+  }
+
+  .overlay__stats {
+    gap: 6px;
+    margin: 12px 0 14px;
+  }
+
+  .overlay__stat {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
+  .overlay__stat strong {
+    font-size: 0.92rem;
   }
 }
 
