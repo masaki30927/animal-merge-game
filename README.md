@@ -22,6 +22,61 @@ After GitHub finishes deploying, the game will be available at:
 
 `https://<username>.github.io/<repository-name>/`
 
+## Android App
+
+This project is prepared for Google Play publishing with Capacitor.
+
+First install dependencies:
+
+```powershell
+npm install
+```
+
+Then generate and sync the Android project:
+
+```powershell
+npm run build
+npx cap add android
+npm run cap:sync
+```
+
+Open Android Studio:
+
+```powershell
+npx cap open android
+```
+
+## Google Play Release
+
+1. Create an upload keystore:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\new-android-keystore.ps1 -StorePassword "your-store-pass" -KeyPassword "your-key-pass"
+```
+
+2. Copy `android/signing.properties.example` to `android/signing.properties` and replace the passwords.
+
+3. Build a signed bundle:
+
+```powershell
+$env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
+$env:GRADLE_USER_HOME='C:\g'
+cd android
+.\gradlew.bat :app:bundleRelease --no-daemon --max-workers=1 '-Dorg.gradle.caching=false'
+```
+
+The Google Play upload file will be created at:
+
+`android/app/build/outputs/bundle/release/app-release.aab`
+
+4. Upload that `.aab` to Google Play Console and complete the store listing.
+
+Useful files for submission:
+
+- `privacy.html`
+- `play-store/store-listing.md`
+- `play-store/release-checklist.md`
+
 ## Controls
 
 - Move the mouse to choose the drop position

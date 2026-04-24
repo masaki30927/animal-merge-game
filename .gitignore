@@ -1,0 +1,6 @@
+node_modules/
+www/
+dist/
+.gradle-user/
+android/keystore/
+android/signing.properties

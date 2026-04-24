@@ -1,0 +1,11 @@
+{
+  "appId": "com.masaki30927.animalmerge",
+  "appName": "Animal Merge Game",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

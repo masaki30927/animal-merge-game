@@ -1,0 +1,4 @@
+storeFile=keystore\\animal-merge-upload-key.jks
+storePassword=CHANGE_ME
+keyAlias=animalmerge
+keyPassword=CHANGE_ME
