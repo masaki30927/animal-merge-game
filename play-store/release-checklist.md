@@ -3,7 +3,7 @@
 ## Before Upload
 
 - [x] Replace the support email placeholder in `privacy.html`
-- [ ] Publish `privacy.html` on GitHub Pages or another public HTTPS URL
+- [x] Publish `privacy.html` on GitHub Pages or another public HTTPS URL
 - [ ] Confirm app name, package name, and screenshots
 - [ ] Keep `android/keystore/animal-merge-upload-key.jks` backed up safely
 - [ ] Keep `android/signing.properties` backed up safely and out of Git
