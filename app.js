@@ -525,12 +525,9 @@
 
   function createAudioManager() {
     let audioContext = null;
+    let primed = false;
 
-    function getContext() {
-      if (!saveStore.get().settings.sound) {
-        return null;
-      }
-
+    function ensureContext() {
       try {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         if (!AudioContextClass) {
@@ -539,13 +536,54 @@
         if (!audioContext) {
           audioContext = new AudioContextClass();
         }
-        if (audioContext.state === "suspended") {
-          audioContext.resume();
-        }
         return audioContext;
       } catch (error) {
         return null;
       }
+    }
+
+    function tryResume(context) {
+      if (!context || context.state !== "suspended") {
+        return;
+      }
+      try {
+        const result = context.resume();
+        if (result && typeof result.catch === "function") {
+          result.catch(() => {});
+        }
+      } catch (error) {
+        // Older browsers may throw synchronously; ignore and retry on next gesture.
+      }
+    }
+
+    function primeForIOS(context) {
+      if (primed || !context) {
+        return;
+      }
+      try {
+        const buffer = context.createBuffer(1, 1, 22050);
+        const source = context.createBufferSource();
+        source.buffer = buffer;
+        source.connect(context.destination);
+        source.start(0);
+        primed = true;
+      } catch (error) {
+        // Silent prime is best-effort.
+      }
+    }
+
+    function getContext() {
+      if (!saveStore.get().settings.sound) {
+        return null;
+      }
+      const context = ensureContext();
+      if (!context) {
+        return null;
+      }
+      if (context.state === "suspended") {
+        tryResume(context);
+      }
+      return context;
     }
 
     function tone(frequency, duration, type = "sine", volume = 0.05, delay = 0) {
@@ -591,7 +629,34 @@
         }
       },
       unlock() {
-        getContext();
+        if (!saveStore.get().settings.sound) {
+          return;
+        }
+        const context = ensureContext();
+        if (!context) {
+          return;
+        }
+        tryResume(context);
+        primeForIOS(context);
+      },
+      suspend() {
+        if (!audioContext || audioContext.state !== "running") {
+          return;
+        }
+        try {
+          const result = audioContext.suspend();
+          if (result && typeof result.catch === "function") {
+            result.catch(() => {});
+          }
+        } catch (error) {
+          // Suspending audio while the tab hides is best-effort.
+        }
+      },
+      resume() {
+        if (!audioContext) {
+          return;
+        }
+        tryResume(audioContext);
       }
     };
   }
@@ -3277,6 +3342,17 @@
   window.addEventListener("blur", () => {
     keyState.left = false;
     keyState.right = false;
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      audioManager.suspend();
+      keyState.left = false;
+      keyState.right = false;
+    } else {
+      audioManager.resume();
+      game.lastTimestamp = 0;
+    }
   });
 
   function handleViewportChange() {
