@@ -623,6 +623,8 @@
     keyboardAimSpeed: 0.42 * SCALE,
     spawnCooldownMs: 420,
     gameOverMs: 2200,
+    gameOverTrapGraceMs: 1200,
+    gameOverSettleVelocity: 0.6 * SCALE,
     comboWindowMs: 1550,
     milestoneEffectMs: 1300,
     fixedDt: 1000 / 60,
@@ -927,6 +929,7 @@
         radius,
         mergeLock: false,
         warningTimer: 0,
+        trapTimer: 0,
         ageMs: 0,
         rotation: 0,
         angularVelocity: 0,
@@ -1143,6 +1146,7 @@
           radius: piece.radius,
           mergeLock: true,
           warningTimer: 0,
+          trapTimer: 0,
           ageMs: 0,
           rotation: ((a.rotation || 0) + (b.rotation || 0)) * 0.5,
           angularVelocity: ((a.angularVelocity || 0) + (b.angularVelocity || 0)) * 0.5,
@@ -1415,19 +1419,32 @@
 
     updateWarningState(deltaMs) {
       let triggeredGameOver = false;
+      const settleVel = GAME.gameOverSettleVelocity;
 
       for (const ball of this.balls) {
         if (ball.y - ball.radius > GAME.warningLineY + GAME.dangerLineGrace) {
           ball.hasClearedWarningLine = true;
         }
 
-        if (ball.hasClearedWarningLine && ball.y - ball.radius <= GAME.warningLineY) {
+        const aboveLine = ball.y - ball.radius <= GAME.warningLineY;
+        const settled = Math.abs(ball.vy) < settleVel && ball.contactCount > 0;
+
+        if (aboveLine && ball.hasClearedWarningLine) {
           ball.warningTimer += deltaMs;
           if (ball.warningTimer >= GAME.gameOverMs) {
             triggeredGameOver = true;
           }
         } else {
           ball.warningTimer = 0;
+        }
+
+        if (aboveLine && settled && !ball.hasClearedWarningLine) {
+          ball.trapTimer = (ball.trapTimer || 0) + deltaMs;
+          if (ball.trapTimer >= GAME.gameOverTrapGraceMs) {
+            triggeredGameOver = true;
+          }
+        } else {
+          ball.trapTimer = 0;
         }
       }
 
@@ -1799,10 +1816,11 @@
     }
 
     drawDangerWarning(now) {
-      const dangerProgress = this.balls.reduce(
-        (max, ball) => Math.max(max, ball.warningTimer / GAME.gameOverMs),
-        0
-      );
+      const dangerProgress = this.balls.reduce((max, ball) => {
+        const warning = ball.warningTimer / GAME.gameOverMs;
+        const trap = (ball.trapTimer || 0) / GAME.gameOverTrapGraceMs;
+        return Math.max(max, warning, trap);
+      }, 0);
 
       if (dangerProgress <= 0) {
         return;
