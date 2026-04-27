@@ -875,6 +875,7 @@
   ];
   const PIECE_INDEX = new Map(PIECES.map((piece, index) => [piece.name, index]));
   let plushCache = new Map();
+  let evolutionBaseCache = null;
 
   function buildPlushCache(game) {
     const cacheDpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
@@ -894,8 +895,20 @@
     plushCache = next;
   }
 
+  function buildEvolutionBaseCache(game) {
+    const cacheDpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    const buffer = document.createElement("canvas");
+    buffer.width = Math.max(1, Math.ceil(LOGICAL.evolution.width * cacheDpr));
+    buffer.height = Math.max(1, Math.ceil(LOGICAL.evolution.height * cacheDpr));
+    const bctx = buffer.getContext("2d");
+    bctx.setTransform(cacheDpr, 0, 0, cacheDpr, 0, 0);
+    game.paintEvolutionRing(bctx);
+    evolutionBaseCache = buffer;
+  }
+
   class Game {
     constructor() {
+      this._hudCache = this.createHudCache();
       this.pointerX = GAME.width / 2;
       this.balls = [];
       this.score = 0;
@@ -1550,18 +1563,38 @@
       }
     }
 
+    invalidateCanvasHudCache() {
+      this._hudCache.previewType = null;
+      this._hudCache.queueType = null;
+    }
+
+    createHudCache() {
+      return {
+        score: null,
+        bestLabel: null,
+        highest: null,
+        progress: null,
+        previewType: null,
+        queueType: null,
+        playerName: null,
+        playerRank: null,
+        leaderboardSig: null,
+        overlayScore: null,
+        overlayBest: null,
+        overlayHighest: null,
+        settingsBest: null,
+        settingsLanguage: null,
+        settingsSound: null,
+        settingsHaptics: null,
+        settingsReducedMotion: null
+      };
+    }
+
     renderHud() {
-      scoreValue.textContent = this.formatScore(this.score);
-      rankingScoreValue.textContent = this.formatScore(this.score);
-      if (bestScoreLabel) {
-        bestScoreLabel.textContent = `${t("bestScore")} ${this.formatScore(this.bestScore)}`;
-      }
-      if (highestAnimalValue) {
-        highestAnimalValue.textContent = this.getHighestTypeLabel();
-      }
-      if (progressValue) {
-        progressValue.textContent = this.getProgressLabel();
-      }
+      this.renderScore();
+      this.renderBest();
+      this.renderHighest();
+      this.renderProgress();
       this.renderLeaderboard();
       this.renderNextPiece();
       this.renderEvolutionRing();
@@ -1570,77 +1603,158 @@
       this.renderSettings();
     }
 
+    renderScore() {
+      const formatted = this.formatScore(this.score);
+      if (this._hudCache.score === formatted) {
+        return;
+      }
+      this._hudCache.score = formatted;
+      scoreValue.textContent = formatted;
+      rankingScoreValue.textContent = formatted;
+    }
+
+    renderBest() {
+      if (!bestScoreLabel) {
+        return;
+      }
+      const text = `${t("bestScore")} ${this.formatScore(this.bestScore)}`;
+      if (this._hudCache.bestLabel === text) {
+        return;
+      }
+      this._hudCache.bestLabel = text;
+      bestScoreLabel.textContent = text;
+    }
+
+    renderHighest() {
+      if (!highestAnimalValue) {
+        return;
+      }
+      const text = this.getHighestTypeLabel();
+      if (this._hudCache.highest === text) {
+        return;
+      }
+      this._hudCache.highest = text;
+      highestAnimalValue.textContent = text;
+    }
+
+    renderProgress() {
+      if (!progressValue) {
+        return;
+      }
+      const text = this.getProgressLabel();
+      if (this._hudCache.progress === text) {
+        return;
+      }
+      this._hudCache.progress = text;
+      progressValue.textContent = text;
+    }
+
     renderSettings() {
       const settings = saveStore.get().settings;
       if (settingsBestValue) {
-        settingsBestValue.textContent = this.formatScore(this.bestScore);
+        const text = this.formatScore(this.bestScore);
+        if (this._hudCache.settingsBest !== text) {
+          this._hudCache.settingsBest = text;
+          settingsBestValue.textContent = text;
+        }
       }
-      for (const button of settingsLanguageButtons) {
-        const isActive = button.dataset.settingsLang === currentLanguage;
-        button.classList.toggle("settings-panel__lang-button--active", isActive);
-        button.setAttribute("aria-pressed", String(isActive));
+      if (this._hudCache.settingsLanguage !== currentLanguage) {
+        this._hudCache.settingsLanguage = currentLanguage;
+        for (const button of settingsLanguageButtons) {
+          const isActive = button.dataset.settingsLang === currentLanguage;
+          button.classList.toggle("settings-panel__lang-button--active", isActive);
+          button.setAttribute("aria-pressed", String(isActive));
+        }
       }
-      if (soundToggle) {
+      if (soundToggle && this._hudCache.settingsSound !== settings.sound) {
+        this._hudCache.settingsSound = settings.sound;
         soundToggle.checked = settings.sound;
       }
-      if (hapticsToggle) {
+      if (hapticsToggle && this._hudCache.settingsHaptics !== settings.haptics) {
+        this._hudCache.settingsHaptics = settings.haptics;
         hapticsToggle.checked = settings.haptics;
       }
-      if (reducedMotionToggle) {
+      if (reducedMotionToggle && this._hudCache.settingsReducedMotion !== settings.reducedMotion) {
+        this._hudCache.settingsReducedMotion = settings.reducedMotion;
         reducedMotionToggle.checked = settings.reducedMotion;
       }
     }
 
     renderLeaderboard() {
       if (playerNameInput && document.activeElement !== playerNameInput) {
-        playerNameInput.value = this.player.name;
+        if (this._hudCache.playerName !== this.player.name) {
+          this._hudCache.playerName = this.player.name;
+          playerNameInput.value = this.player.name;
+        }
       }
 
       const ranked = this.normalizeLeaderboard(this.leaderboard);
+      const top = ranked.slice(0, 3);
+      const sig = top
+        .map((entry, index) => `${index}|${entry.id}|${entry.name}|${entry.score}`)
+        .join("/") + `||me=${this.player.id}||lang=${currentLanguage}`;
 
-      if (leaderboardList) {
-        leaderboardList.innerHTML = "";
-
-        ranked.slice(0, 3).forEach((entry, index) => {
+      if (leaderboardList && this._hudCache.leaderboardSig !== sig) {
+        this._hudCache.leaderboardSig = sig;
+        while (leaderboardList.children.length < top.length) {
           const item = document.createElement("li");
-          if (entry.id === this.player.id) {
-            item.classList.add("ranking-card__mine");
-          }
-
-          const rank = document.createElement("span");
-          rank.textContent = String(index + 1);
-
-          const name = document.createElement("em");
-          name.textContent = entry.name;
-
-          const score = document.createElement("strong");
-          score.textContent = this.formatScore(entry.score);
-
-          item.append(rank, name, score);
+          item.append(
+            document.createElement("span"),
+            document.createElement("em"),
+            document.createElement("strong")
+          );
           leaderboardList.append(item);
+        }
+        while (leaderboardList.children.length > top.length) {
+          leaderboardList.removeChild(leaderboardList.lastChild);
+        }
+        top.forEach((entry, index) => {
+          const item = leaderboardList.children[index];
+          item.classList.toggle("ranking-card__mine", entry.id === this.player.id);
+          const rankStr = String(index + 1);
+          const scoreStr = this.formatScore(entry.score);
+          const rankNode = item.children[0];
+          const nameNode = item.children[1];
+          const scoreNode = item.children[2];
+          if (rankNode.textContent !== rankStr) {
+            rankNode.textContent = rankStr;
+          }
+          if (nameNode.textContent !== entry.name) {
+            nameNode.textContent = entry.name;
+          }
+          if (scoreNode.textContent !== scoreStr) {
+            scoreNode.textContent = scoreStr;
+          }
         });
       }
 
       if (playerRankValue) {
         const playerIndex = ranked.findIndex((entry) => entry.id === this.player.id);
-        playerRankValue.textContent = playerIndex >= 0 ? `#${playerIndex + 1}` : "--";
+        const rankText = playerIndex >= 0 ? `#${playerIndex + 1}` : "--";
+        if (this._hudCache.playerRank !== rankText) {
+          this._hudCache.playerRank = rankText;
+          playerRankValue.textContent = rankText;
+        }
       }
     }
 
     renderNextPiece() {
-      nextCtx.clearRect(0, 0, LOGICAL.next.width, LOGICAL.next.height);
-      const piece = PIECES[this.previewType];
-      const scale = Math.min(1, 32 / piece.radius);
+      if (this._hudCache.previewType !== this.previewType) {
+        this._hudCache.previewType = this.previewType;
+        nextCtx.clearRect(0, 0, LOGICAL.next.width, LOGICAL.next.height);
+        const piece = PIECES[this.previewType];
+        const scale = Math.min(1, 32 / piece.radius);
+        this.drawPieceCached(
+          nextCtx,
+          LOGICAL.next.width / 2,
+          LOGICAL.next.height / 2,
+          piece.radius * scale,
+          piece.name
+        );
+      }
 
-      this.drawPieceCached(
-        nextCtx,
-        LOGICAL.next.width / 2,
-        LOGICAL.next.height / 2,
-        piece.radius * scale,
-        piece.name
-      );
-
-      if (queueCtx && queueCanvas) {
+      if (queueCtx && queueCanvas && this._hudCache.queueType !== this.nextType) {
+        this._hudCache.queueType = this.nextType;
         queueCtx.clearRect(0, 0, LOGICAL.queue.width, LOGICAL.queue.height);
         const queuedPiece = PIECES[this.nextType];
         const queuedScale = Math.min(1, 18 / queuedPiece.radius);
@@ -1656,13 +1770,25 @@
 
     renderOverlayStats() {
       if (overlayScoreValue) {
-        overlayScoreValue.textContent = this.formatScore(this.score);
+        const text = this.formatScore(this.score);
+        if (this._hudCache.overlayScore !== text) {
+          this._hudCache.overlayScore = text;
+          overlayScoreValue.textContent = text;
+        }
       }
       if (overlayBestValue) {
-        overlayBestValue.textContent = this.formatScore(this.bestScore);
+        const text = this.formatScore(this.bestScore);
+        if (this._hudCache.overlayBest !== text) {
+          this._hudCache.overlayBest = text;
+          overlayBestValue.textContent = text;
+        }
       }
       if (overlayHighestValue) {
-        overlayHighestValue.textContent = this.getHighestTypeLabel();
+        const text = this.getHighestTypeLabel();
+        if (this._hudCache.overlayHighest !== text) {
+          this._hudCache.overlayHighest = text;
+          overlayHighestValue.textContent = text;
+        }
       }
     }
 
@@ -1701,43 +1827,53 @@
       comboBadge.style.transform = `translateX(-50%) scale(${1 + this.comboFlash * 0.14 + tierBoost})`;
     }
 
-    renderEvolutionRing() {
-      evolutionCtx.clearRect(0, 0, LOGICAL.evolution.width, LOGICAL.evolution.height);
+    paintEvolutionRing(targetCtx) {
       const centerX = LOGICAL.evolution.width / 2;
       const centerY = LOGICAL.evolution.height / 2;
       const ringRadius = 58;
 
-      evolutionCtx.save();
-      evolutionCtx.globalAlpha = 0.62;
-      const ringFill = evolutionCtx.createRadialGradient(centerX - 18, centerY - 20, 6, centerX, centerY, 70);
+      targetCtx.clearRect(0, 0, LOGICAL.evolution.width, LOGICAL.evolution.height);
+
+      targetCtx.save();
+      targetCtx.globalAlpha = 0.62;
+      const ringFill = targetCtx.createRadialGradient(centerX - 18, centerY - 20, 6, centerX, centerY, 70);
       ringFill.addColorStop(0, "rgba(255, 255, 246, 0.92)");
       ringFill.addColorStop(0.62, "rgba(255, 235, 204, 0.52)");
       ringFill.addColorStop(1, "rgba(214, 239, 222, 0.24)");
-      evolutionCtx.fillStyle = ringFill;
-      evolutionCtx.beginPath();
-      evolutionCtx.arc(centerX, centerY, 64, 0, Math.PI * 2);
-      evolutionCtx.fill();
-      evolutionCtx.strokeStyle = "rgba(238, 158, 174, 0.28)";
-      evolutionCtx.lineWidth = 7;
-      evolutionCtx.beginPath();
-      evolutionCtx.arc(centerX, centerY, 54, 0, Math.PI * 2);
-      evolutionCtx.stroke();
-      evolutionCtx.setLineDash([5, 5]);
-      evolutionCtx.strokeStyle = "rgba(130, 189, 154, 0.32)";
-      evolutionCtx.lineWidth = 2;
-      evolutionCtx.beginPath();
-      evolutionCtx.arc(centerX, centerY, 70, 0, Math.PI * 2);
-      evolutionCtx.stroke();
-      evolutionCtx.setLineDash([]);
-      evolutionCtx.restore();
+      targetCtx.fillStyle = ringFill;
+      targetCtx.beginPath();
+      targetCtx.arc(centerX, centerY, 64, 0, Math.PI * 2);
+      targetCtx.fill();
+      targetCtx.strokeStyle = "rgba(238, 158, 174, 0.28)";
+      targetCtx.lineWidth = 7;
+      targetCtx.beginPath();
+      targetCtx.arc(centerX, centerY, 54, 0, Math.PI * 2);
+      targetCtx.stroke();
+      targetCtx.setLineDash([5, 5]);
+      targetCtx.strokeStyle = "rgba(130, 189, 154, 0.32)";
+      targetCtx.lineWidth = 2;
+      targetCtx.beginPath();
+      targetCtx.arc(centerX, centerY, 70, 0, Math.PI * 2);
+      targetCtx.stroke();
+      targetCtx.setLineDash([]);
+      targetCtx.restore();
 
       PIECES.forEach((piece, index) => {
         const angle = -Math.PI / 2 + (Math.PI * 2 * index) / PIECES.length;
         const radius = Math.min(13, Math.max(8, piece.radius * 0.18));
         const x = centerX + Math.cos(angle) * ringRadius;
         const y = centerY + Math.sin(angle) * ringRadius;
-        this.drawPieceCached(evolutionCtx, x, y, radius, piece.name);
+        this.drawPieceCached(targetCtx, x, y, radius, piece.name);
       });
+    }
+
+    renderEvolutionRing() {
+      if (!evolutionBaseCache) {
+        this.paintEvolutionRing(evolutionCtx);
+        return;
+      }
+      evolutionCtx.clearRect(0, 0, LOGICAL.evolution.width, LOGICAL.evolution.height);
+      evolutionCtx.drawImage(evolutionBaseCache, 0, 0, LOGICAL.evolution.width, LOGICAL.evolution.height);
     }
 
     draw(now) {
@@ -3165,6 +3301,7 @@
   let suppressNextClick = false;
   configureAllCanvases();
   buildPlushCache(game);
+  buildEvolutionBaseCache(game);
   applyLanguage(currentLanguage);
   game.renderHud();
 
@@ -3414,6 +3551,7 @@
 
   function handleViewportChange() {
     configureAllCanvases();
+    game.invalidateCanvasHudCache();
     game.renderHud();
     game.draw(performance.now());
   }
