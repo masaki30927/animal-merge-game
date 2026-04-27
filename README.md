@@ -77,6 +77,39 @@ Useful files for submission:
 - `play-store/store-listing.md`
 - `play-store/release-checklist.md`
 
+## Keystore Backup
+
+The Android upload signing key is what proves to Google Play that an update came from you. Two files matter:
+
+- `android/keystore/animal-merge-upload-key.jks` — the upload keystore itself.
+- `android/signing.properties` — the passwords and aliases needed to use the keystore at build time.
+
+Both are excluded from Git via `.gitignore`. Never commit them.
+
+### Why this matters
+
+If you lose the `.jks` file or its passwords, **you cannot publish another update under the same package name**. The only recovery path is Google Play's key reset request, which is slow and not always granted. Treat both files like you would treat your bank credentials.
+
+### Where to back them up
+
+Store at least two encrypted copies in places that are not the project folder:
+
+1. A password manager that supports file attachments (1Password, Bitwarden, KeePassXC, etc.) — keep the keystore as an attachment alongside the store/key passwords.
+2. An encrypted external drive or cloud-backed encrypted volume (e.g. Cryptomator, age-encrypted archive in Google Drive / iCloud Drive).
+
+Verify at least once that you can restore the keystore from a backup, then build a release AAB with it on a clean machine. A backup you have never restored is not a backup.
+
+### If a key file ever gets committed by accident
+
+Treat any commit that contains the `.jks` or `signing.properties` as compromised. Steps, in order:
+
+1. Generate a new keystore (`scripts/new-android-keystore.ps1`) and update `signing.properties` locally.
+2. Rewrite Git history to remove the leaked file from every commit (e.g. `git filter-repo` or `git-filter-branch`). These commands rewrite history and require a force push — only do this on a repository you own and after backing up the current state.
+3. Force-push the cleaned branch and notify any collaborators to re-clone.
+4. If the leaked key was already used to sign a published release, contact Google Play support — you will likely need their key upgrade flow to swap signing keys.
+
+The cleanup commands above are destructive and out of scope for this README — read the official `git filter-repo` docs before running them.
+
 ## Controls
 
 - Move the mouse to choose the drop position

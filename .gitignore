@@ -1,7 +1,22 @@
+# Dependencies
 node_modules/
+
+# Build outputs
 www/
 dist/
+android/app/build/
+android/app/release/
+
+# Gradle / IDE artifacts
 .gradle-user/
 .gradle-release/
+android/.gradle/
+android/local.properties
+
+# Signing keys (CRITICAL: never commit)
 android/keystore/
 android/signing.properties
+
+# OS noise
+.DS_Store
+Thumbs.db

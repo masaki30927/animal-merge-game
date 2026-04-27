@@ -5,8 +5,14 @@
 - [x] Replace the support email placeholder in `privacy.html`
 - [x] Publish `privacy.html` on GitHub Pages or another public HTTPS URL
 - [ ] Confirm app name, package name, and screenshots
-- [ ] Keep `android/keystore/animal-merge-upload-key.jks` backed up safely
-- [ ] Keep `android/signing.properties` backed up safely and out of Git
+
+### Keystore safety
+
+- [x] `android/keystore/` and `android/signing.properties` are excluded by `.gitignore`
+- [ ] `android/keystore/animal-merge-upload-key.jks` backed up to at least two places (password manager + encrypted drive)
+- [ ] `android/signing.properties` backed up alongside the keystore
+- [ ] Verified the backup by restoring it on a clean machine and successfully running `bundleRelease`
+- [ ] Recovery procedure for accidental key commit reviewed in `README.md` (Keystore Backup section)
 
 ## Build
 
