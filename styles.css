@@ -186,9 +186,33 @@ canvas {
 .best-score {
   margin-top: -22px;
   font-size: 0.74rem;
-  font-weight: 700;
-  color: rgba(255, 253, 220, 0.82);
+  font-weight: 800;
+  color: rgba(95, 73, 50, 0.92);
   text-transform: uppercase;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.settings-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: rgba(60, 50, 40, 0.32);
+  cursor: pointer;
+}
+
+.settings-backdrop--hidden {
+  display: none;
 }
 
 #nextCanvas {

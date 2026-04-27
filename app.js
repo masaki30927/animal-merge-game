@@ -21,7 +21,9 @@
   const restartButton = document.getElementById("restartButton");
   const settingsButton = document.getElementById("settingsButton");
   const settingsPanel = document.getElementById("settingsPanel");
+  const settingsBackdrop = document.getElementById("settingsBackdrop");
   const settingsCloseButton = document.getElementById("settingsCloseButton");
+  const liveStatus = document.getElementById("liveStatus");
   const settingsBestValue = document.getElementById("settingsBestValue");
   const settingsLanguageButtons = [...document.querySelectorAll("[data-settings-lang]")];
   const soundToggle = document.getElementById("soundToggle");
@@ -392,6 +394,13 @@
     };
   }
 
+  function detectPrefersReducedMotion() {
+    return Boolean(
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+  }
+
   function createDefaultSave(overrides = {}) {
     const now = new Date().toISOString();
     const player = {
@@ -406,7 +415,11 @@
       player,
       bestScore: 0,
       leaderboard: sanitizeLeaderboard(DEFAULT_LEADERBOARD),
-      settings: sanitizeSettings({ ...DEFAULT_SETTINGS, ...overrides })
+      settings: sanitizeSettings({
+        ...DEFAULT_SETTINGS,
+        reducedMotion: detectPrefersReducedMotion(),
+        ...overrides
+      })
     };
   }
 
@@ -924,6 +937,7 @@
       this.accumulator = 0;
       this.lastDropAt = 0;
       this.gameOver = false;
+      this.announcedNewBest = false;
       this.effects = [];
       this.shakePower = 0;
       this.mergeFlash = 0;
@@ -946,6 +960,7 @@
       this.accumulator = 0;
       this.lastDropAt = 0;
       this.gameOver = false;
+      this.announcedNewBest = false;
       this.effects = [];
       this.shakePower = 0;
       this.mergeFlash = 0;
@@ -1338,6 +1353,10 @@
       this.bestPulse = 1;
       saveStore.setBestScore(this.bestScore);
       this.savePlayerScore(this.bestScore);
+      if (!this.announcedNewBest) {
+        this.announcedNewBest = true;
+        this.announceLive(`${t("newBest")} ${this.formatScore(this.bestScore)}`);
+      }
       return true;
     }
 
@@ -1560,12 +1579,23 @@
         audioManager.play("gameOver");
         this.renderOverlayStats();
         this.showOverlay();
+        this.announceLive(`${t("gameOver")} ${t("finalScore")} ${this.formatScore(this.score)}`);
       }
     }
 
     invalidateCanvasHudCache() {
       this._hudCache.previewType = null;
       this._hudCache.queueType = null;
+    }
+
+    announceLive(message) {
+      if (!liveStatus || !message) {
+        return;
+      }
+      if (liveStatus.textContent === message) {
+        liveStatus.textContent = "";
+      }
+      liveStatus.textContent = message;
     }
 
     createHudCache() {
@@ -3384,13 +3414,59 @@
     }
   }
 
+  let lastFocusedBeforeSettings = null;
+
+  function getFocusableElements(container) {
+    if (!container) {
+      return [];
+    }
+    const selector = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    return [...container.querySelectorAll(selector)].filter((el) => {
+      return el.offsetParent !== null || el === document.activeElement;
+    });
+  }
+
   function setSettingsPanelOpen(open) {
     if (!settingsPanel) {
       return;
     }
 
+    const wasOpen = !settingsPanel.classList.contains("settings-panel--hidden");
     settingsPanel.classList.toggle("settings-panel--hidden", !open);
     settingsPanel.setAttribute("aria-hidden", String(!open));
+
+    if (settingsBackdrop) {
+      settingsBackdrop.classList.toggle("settings-backdrop--hidden", !open);
+      settingsBackdrop.setAttribute("aria-hidden", "true");
+    }
+
+    if (open) {
+      if (!wasOpen) {
+        lastFocusedBeforeSettings = document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+      }
+      const focusables = getFocusableElements(settingsPanel);
+      const target = focusables[0] || settingsPanel;
+      window.requestAnimationFrame(() => {
+        try {
+          target.focus({ preventScroll: true });
+        } catch (error) {
+          target.focus();
+        }
+      });
+    } else if (wasOpen) {
+      const restore = lastFocusedBeforeSettings || settingsButton;
+      lastFocusedBeforeSettings = null;
+      if (restore && typeof restore.focus === "function") {
+        try {
+          restore.focus({ preventScroll: true });
+        } catch (error) {
+          restore.focus();
+        }
+      }
+    }
+
     game.renderSettings();
   }
 
@@ -3460,6 +3536,46 @@
       setSettingsPanelOpen(false);
     });
   }
+
+  if (settingsBackdrop) {
+    settingsBackdrop.addEventListener("click", () => {
+      setSettingsPanelOpen(false);
+    });
+  }
+
+  if (settingsPanel) {
+    settingsPanel.addEventListener("keydown", (event) => {
+      if (settingsPanel.classList.contains("settings-panel--hidden")) {
+        return;
+      }
+      if (event.key !== "Tab") {
+        return;
+      }
+      const focusables = getFocusableElements(settingsPanel);
+      if (focusables.length === 0) {
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") {
+      return;
+    }
+    if (settingsPanel && !settingsPanel.classList.contains("settings-panel--hidden")) {
+      event.preventDefault();
+      setSettingsPanelOpen(false);
+    }
+  });
 
   if (hapticsToggle) {
     hapticsToggle.addEventListener("change", () => {
