@@ -25,7 +25,7 @@
 - [ ] Create the app in Google Play Console
 - [ ] Fill in the app access / ads / data safety forms
 - [ ] Add store listing text from `play-store/store-listing.md`
-- [ ] Upload icon, screenshots, and feature graphic
+- [ ] Upload icon, screenshots, and feature graphic (specs and shot list in [`asset-spec.md`](asset-spec.md))
 - [ ] Add privacy policy URL
 - [ ] Upload `app-release.aab`
 - [ ] Start internal or closed testing
