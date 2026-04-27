@@ -873,6 +873,26 @@
       accessory: "crown"
     }
   ];
+  const PIECE_INDEX = new Map(PIECES.map((piece, index) => [piece.name, index]));
+  let plushCache = new Map();
+
+  function buildPlushCache(game) {
+    const cacheDpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    const next = new Map();
+    for (const piece of PIECES) {
+      const r = piece.radius;
+      const padding = r * 0.7;
+      const logicalSide = r * 2 + padding * 2;
+      const buffer = document.createElement("canvas");
+      buffer.width = Math.max(1, Math.ceil(logicalSide * cacheDpr));
+      buffer.height = Math.max(1, Math.ceil(logicalSide * cacheDpr));
+      const bctx = buffer.getContext("2d");
+      bctx.setTransform(cacheDpr, 0, 0, cacheDpr, 0, 0);
+      game.drawPiece(bctx, padding + r, padding + r, r, piece.color, piece.name);
+      next.set(piece.name, { canvas: buffer, padding, radius: r });
+    }
+    plushCache = next;
+  }
 
   class Game {
     constructor() {
@@ -1470,24 +1490,24 @@
         return;
       }
 
-      this.effects = this.effects
-        .map((effect) => {
-          const nextAge = effect.age + deltaMs;
-          const progress = Math.min(1, nextAge / effect.duration);
+      const dt = deltaMs / 16.67;
 
-          return {
-            ...effect,
-            age: nextAge,
-            particles: effect.particles.map((particle) => ({
-              ...particle,
-              x: particle.x + particle.vx * (deltaMs / 16.67),
-              y: particle.y + particle.vy * (deltaMs / 16.67),
-              vy: particle.vy + 0.03 * (deltaMs / 16.67),
-              size: particle.size * (1 - progress * 0.045)
-            }))
-          };
-        })
-        .filter((effect) => effect.age < effect.duration);
+      for (let i = this.effects.length - 1; i >= 0; i -= 1) {
+        const effect = this.effects[i];
+        effect.age += deltaMs;
+        if (effect.age >= effect.duration) {
+          this.effects.splice(i, 1);
+          continue;
+        }
+        const progress = effect.age / effect.duration;
+        const sizeDecay = 1 - progress * 0.045;
+        for (const particle of effect.particles) {
+          particle.x += particle.vx * dt;
+          particle.y += particle.vy * dt;
+          particle.vy += 0.03 * dt;
+          particle.size *= sizeDecay;
+        }
+      }
     }
 
     updateWarningState(deltaMs) {
@@ -1612,12 +1632,11 @@
       const piece = PIECES[this.previewType];
       const scale = Math.min(1, 32 / piece.radius);
 
-      this.drawPiece(
+      this.drawPieceCached(
         nextCtx,
         LOGICAL.next.width / 2,
         LOGICAL.next.height / 2,
         piece.radius * scale,
-        piece.color,
         piece.name
       );
 
@@ -1625,12 +1644,11 @@
         queueCtx.clearRect(0, 0, LOGICAL.queue.width, LOGICAL.queue.height);
         const queuedPiece = PIECES[this.nextType];
         const queuedScale = Math.min(1, 18 / queuedPiece.radius);
-        this.drawPiece(
+        this.drawPieceCached(
           queueCtx,
           LOGICAL.queue.width / 2,
           LOGICAL.queue.height / 2,
           queuedPiece.radius * queuedScale,
-          queuedPiece.color,
           queuedPiece.name
         );
       }
@@ -1718,7 +1736,7 @@
         const radius = Math.min(13, Math.max(8, piece.radius * 0.18));
         const x = centerX + Math.cos(angle) * ringRadius;
         const y = centerY + Math.sin(angle) * ringRadius;
-        this.drawPiece(evolutionCtx, x, y, radius, piece.color, piece.name);
+        this.drawPieceCached(evolutionCtx, x, y, radius, piece.name);
       });
     }
 
@@ -2044,7 +2062,7 @@
       ctx.stroke();
 
       ctx.globalAlpha = this.gameOver ? 0.35 : 0.55;
-      this.drawPiece(ctx, x, y, piece.radius * pulse, piece.color, piece.name);
+      this.drawPieceCached(ctx, x, y, piece.radius * pulse, piece.name);
 
       if (cooldownProgress < 1) {
         ctx.globalAlpha = 0.78;
@@ -2083,7 +2101,8 @@
     }
 
     drawPiece(targetCtx, x, y, radius, color, label) {
-      const piece = PIECES.find((entry) => entry.name === label);
+      const index = PIECE_INDEX.get(label);
+      const piece = index === undefined ? null : PIECES[index];
 
       if (!piece) {
         return;
@@ -2147,6 +2166,17 @@
       targetCtx.restore();
     }
 
+    drawPieceCached(targetCtx, x, y, radius, label) {
+      const cached = plushCache.get(label);
+      if (!cached) {
+        return;
+      }
+      const scale = radius / cached.radius;
+      const totalSide = (cached.radius * 2 + cached.padding * 2) * scale;
+      const offset = (cached.radius + cached.padding) * scale;
+      targetCtx.drawImage(cached.canvas, x - offset, y - offset, totalSide, totalSide);
+    }
+
     drawSquishyPiece(targetCtx, ball, piece) {
       const squish = Math.min(1, ball.squish || 0);
       const wobble = Math.sin(ball.ageMs * 0.018) * Math.min(0.05, squish * 0.12);
@@ -2155,7 +2185,7 @@
       targetCtx.translate(ball.x, ball.y);
       targetCtx.rotate((ball.rotation || 0) + wobble);
       targetCtx.scale(1 + squish * 0.16, 1 - squish * 0.1);
-      this.drawPiece(targetCtx, 0, 0, ball.radius, piece.color, piece.name);
+      this.drawPieceCached(targetCtx, 0, 0, ball.radius, piece.name);
       targetCtx.restore();
     }
 
@@ -3134,6 +3164,7 @@
   let activeTouchPointerId = null;
   let suppressNextClick = false;
   configureAllCanvases();
+  buildPlushCache(game);
   applyLanguage(currentLanguage);
   game.renderHud();
 

@@ -401,6 +401,8 @@ canvas {
   position: relative;
   width: 100%;
   aspect-ratio: 480 / 620;
+  filter: none;
+  box-shadow: 0 14px 16px rgba(130, 82, 66, 0.18);
 }
 
 .combo-badge {
@@ -463,7 +465,6 @@ canvas {
   width: 100%;
   height: 100%;
   display: block;
-  filter: drop-shadow(0 14px 16px rgba(130, 82, 66, 0.18));
 }
 
 .next-bubble .hud-title {
