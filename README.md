@@ -60,13 +60,30 @@ npx cap open android
 
 ## Google Play Release
 
+### One-time setup
+
 1. Create an upload keystore:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\new-android-keystore.ps1 -StorePassword "your-store-pass" -KeyPassword "your-key-pass"
 ```
 
-2. Copy `android/signing.properties.example` to `android/signing.properties` and replace the passwords.
+2. Copy `android/signing.properties.example` to `android/signing.properties` and replace the passwords. Both files are gitignored — see the [Keystore Backup](#keystore-backup) section for storage rules.
+
+### Each release
+
+1. Sync the latest web build into the Android project:
+
+```powershell
+npm run cap:sync
+```
+
+This runs `node scripts/copy-web-assets.mjs` (refreshes `www/`) and then `npx cap sync android`, which copies `index.html`, `app.js`, `styles.css`, `manifest.webmanifest`, and `sw.js` into `android/app/src/main/assets/public/`. **The MainActivity entry in `android/app/src/main/AndroidManifest.xml` declares `android:screenOrientation="portrait"` and `cap sync` does not strip it** — verify after the sync if you ever update Capacitor.
+
+2. Bump the app version in [`android/app/build.gradle`](android/app/build.gradle):
+
+   - `versionCode` — strictly increasing integer. Bump by 1 for every upload, even for a re-upload of the same build (Play Console rejects duplicates).
+   - `versionName` — human-readable SemVer string (`1.0.0`, `1.1.0`, …). Match the cache-buster query string and `CACHE_VERSION` in `sw.js` if you want them aligned, but Play does not require it.
 
 3. Build a signed bundle:
 
@@ -81,13 +98,23 @@ The Google Play upload file will be created at:
 
 `android/app/build/outputs/bundle/release/app-release.aab`
 
-4. Upload that `.aab` to Google Play Console and complete the store listing.
+4. Confirm the signed bundle is the one you intend to upload:
+
+```powershell
+Get-FileHash android\app\build\outputs\bundle\release\app-release.aab -Algorithm SHA256
+```
+
+Save the resulting SHA-256 alongside the version in your release notes; if the upload ever fails midway, you can verify the file the Play Console saw against this hash.
+
+5. Upload the `.aab` to Google Play Console and complete the store listing.
 
 Useful files for submission:
 
 - `privacy.html`
-- `play-store/store-listing.md`
-- `play-store/release-checklist.md`
+- `play-store/store-listing.md` — the Data Safety form's source of truth lives in here too
+- `play-store/asset-spec.md` — image / video sizes and screenshot shot list
+- `play-store/release-checklist.md` — full step-by-step
+- `play-store/qa-checklist.md` — the 20-item device test you should run before submitting
 
 ## Keystore Backup
 
