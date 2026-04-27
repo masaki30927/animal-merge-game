@@ -552,6 +552,104 @@ canvas {
   box-shadow: var(--shadow);
 }
 
+.settings-panel {
+  position: absolute;
+  left: 50%;
+  bottom: 8%;
+  z-index: 4;
+  width: min(320px, 72%);
+  padding: 16px;
+  transform: translateX(-50%);
+  border-radius: 22px;
+  background: rgba(250, 244, 224, 0.96);
+  border: 3px solid rgba(255, 255, 255, 0.58);
+  outline: 2px dashed rgba(128, 111, 91, 0.32);
+  outline-offset: -8px;
+  box-shadow: 0 18px 32px rgba(83, 52, 22, 0.22);
+}
+
+.settings-panel--hidden {
+  display: none;
+}
+
+.settings-panel__header,
+.settings-panel__row,
+.settings-panel__stat,
+.settings-panel__language {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.settings-panel__header {
+  margin-bottom: 12px;
+}
+
+.settings-panel__header strong {
+  color: #66594d;
+  font-size: 1.12rem;
+}
+
+.settings-panel__close {
+  min-height: 30px;
+}
+
+.settings-panel__row,
+.settings-panel__stat,
+.settings-panel__language {
+  min-height: 42px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.5);
+  color: #756352;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.settings-panel__stat strong {
+  color: #66594d;
+  font-size: 1.06rem;
+}
+
+.settings-panel__lang-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 42px);
+  gap: 5px;
+}
+
+.settings-panel__lang-button {
+  min-height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.56);
+  color: #6b5a4b;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(139, 119, 96, 0.14);
+}
+
+.settings-panel__lang-button--active {
+  background: linear-gradient(180deg, #f6e6ab, #d3c08f);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7), 0 2px 0 rgba(105, 86, 69, 0.16);
+}
+
+.settings-panel__row input {
+  width: 22px;
+  height: 22px;
+  accent-color: #8fb8b7;
+}
+
+.settings-panel__danger {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 12px;
+  color: #7f4e43;
+}
+
 .button {
   border: 0;
   border-radius: 999px;
@@ -832,6 +930,19 @@ h2 {
     border-radius: 22px;
     font-size: 0.86rem;
     background: rgba(112, 92, 55, 0.34);
+  }
+
+  .settings-panel {
+    bottom: calc(64px + env(safe-area-inset-bottom));
+    width: calc(100dvw - 34px);
+    padding: 14px;
+  }
+
+  .settings-panel__row,
+  .settings-panel__stat,
+  .settings-panel__language {
+    min-height: 40px;
+    font-size: 0.84rem;
   }
 
   .button {

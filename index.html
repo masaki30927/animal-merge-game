@@ -11,7 +11,7 @@
   <meta property="og:title" content="Animal Merge Game">
   <meta property="og:description" content="A browser-playable animal merging game with soft plush toy pieces.">
   <title>Animal Merge Game</title>
-  <link rel="stylesheet" href="styles.css?v=20260424-2">
+  <link rel="stylesheet" href="styles.css?v=20260427-1">
 </head>
 <body>
   <main class="app-shell">
@@ -113,14 +113,46 @@
         </div>
       </aside>
 
+      <aside id="settingsPanel" class="settings-panel settings-panel--hidden" aria-label="Settings" data-i18n-aria="settings">
+        <div class="settings-panel__header">
+          <strong data-i18n="settings">Settings</strong>
+          <button id="settingsCloseButton" class="button settings-panel__close" type="button" data-i18n="close">Close</button>
+        </div>
+        <div class="settings-panel__stat">
+          <span data-i18n="bestScore">Best Score</span>
+          <strong id="settingsBestValue">0</strong>
+        </div>
+        <div class="settings-panel__language">
+          <span data-i18n="language">Language</span>
+          <div class="settings-panel__lang-buttons" role="group" aria-label="Language">
+            <button class="settings-panel__lang-button" type="button" data-settings-lang="ja">JP</button>
+            <button class="settings-panel__lang-button" type="button" data-settings-lang="en">EN</button>
+          </div>
+        </div>
+        <label class="settings-panel__row">
+          <span data-i18n="sound">Sound</span>
+          <input id="soundToggle" type="checkbox">
+        </label>
+        <label class="settings-panel__row">
+          <span data-i18n="haptics">Haptics</span>
+          <input id="hapticsToggle" type="checkbox">
+        </label>
+        <label class="settings-panel__row">
+          <span data-i18n="reducedMotion">Reduce Motion</span>
+          <input id="reducedMotionToggle" type="checkbox">
+        </label>
+        <button id="resetDataButton" class="button settings-panel__danger" type="button" data-i18n="resetData">Reset Data</button>
+      </aside>
+
       <div class="control-strip">
         <span data-i18n="move">Move</span>
         <span data-i18n="drop">Drop</span>
+        <button id="settingsButton" class="button" type="button" data-i18n="settings">Settings</button>
         <button id="restartButton" class="button" type="button" data-i18n="restart">Restart</button>
       </div>
     </section>
   </main>
 
-  <script src="app.js?v=20260424-2"></script>
+  <script src="app.js?v=20260427-1"></script>
 </body>
 </html>

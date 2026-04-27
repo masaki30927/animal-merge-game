@@ -19,6 +19,15 @@
   const playerNameInput = document.getElementById("playerNameInput");
   const playerRankValue = document.getElementById("playerRankValue");
   const restartButton = document.getElementById("restartButton");
+  const settingsButton = document.getElementById("settingsButton");
+  const settingsPanel = document.getElementById("settingsPanel");
+  const settingsCloseButton = document.getElementById("settingsCloseButton");
+  const settingsBestValue = document.getElementById("settingsBestValue");
+  const settingsLanguageButtons = [...document.querySelectorAll("[data-settings-lang]")];
+  const soundToggle = document.getElementById("soundToggle");
+  const hapticsToggle = document.getElementById("hapticsToggle");
+  const reducedMotionToggle = document.getElementById("reducedMotionToggle");
+  const resetDataButton = document.getElementById("resetDataButton");
   const overlay = document.getElementById("overlay");
   const overlayRestartButton = document.getElementById("overlayRestartButton");
   const overlayScoreValue = document.getElementById("overlayScoreValue");
@@ -27,12 +36,47 @@
   const languageButtons = [...document.querySelectorAll("[data-lang-option]")];
   const translatedTextNodes = [...document.querySelectorAll("[data-i18n]")];
   const translatedAriaNodes = [...document.querySelectorAll("[data-i18n-aria]")];
-  const SCALE = canvas.height / 620;
+  const LOGICAL = {
+    game: { width: 480, height: 620 },
+    next: { width: 110, height: 110 },
+    queue: { width: 72, height: 72 },
+    evolution: { width: 170, height: 170 }
+  };
+  const SCALE = LOGICAL.game.height / 620;
+
+  function configureCanvas(targetCanvas, targetCtx, logical) {
+    if (!targetCanvas || !targetCtx) {
+      return;
+    }
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const rect = targetCanvas.getBoundingClientRect();
+    const cssWidth = rect.width > 0 ? rect.width : logical.width;
+    const cssHeight = rect.height > 0 ? rect.height : logical.height;
+    targetCanvas.width = Math.max(1, Math.round(cssWidth * dpr));
+    targetCanvas.height = Math.max(1, Math.round(cssHeight * dpr));
+    targetCtx.setTransform(
+      targetCanvas.width / logical.width,
+      0,
+      0,
+      targetCanvas.height / logical.height,
+      0,
+      0
+    );
+  }
+
+  function configureAllCanvases() {
+    configureCanvas(canvas, ctx, LOGICAL.game);
+    configureCanvas(nextCanvas, nextCtx, LOGICAL.next);
+    configureCanvas(queueCanvas, queueCtx, LOGICAL.queue);
+    configureCanvas(evolutionCanvas, evolutionCtx, LOGICAL.evolution);
+  }
   const STORAGE_KEYS = {
-    bestScore: "animal-merge-best",
-    player: "animal-merge-player",
-    leaderboard: "animal-merge-leaderboard",
-    language: "animal-merge-language"
+    appState: "animal-merge-save-v2",
+    corruptPrefix: "animal-merge-corrupt-save",
+    legacyBestScore: "animal-merge-best",
+    legacyPlayer: "animal-merge-player",
+    legacyLeaderboard: "animal-merge-leaderboard",
+    legacyLanguage: "animal-merge-language"
   };
   const I18N = {
     en: {
@@ -66,6 +110,14 @@
       combo: "Combo",
       danger: "Danger",
       newBest: "New Best",
+      settings: "Settings",
+      close: "Close",
+      language: "Language",
+      sound: "Sound",
+      haptics: "Haptics",
+      reducedMotion: "Reduce Motion",
+      resetData: "Reset Data",
+      resetDataConfirm: "Reset local player data, scores, ranking, and settings?",
       pieceRabbit: "Rabbit",
       pieceCat: "Cat",
       pieceDog: "Dog",
@@ -112,6 +164,14 @@
       combo: "\u30b3\u30f3\u30dc",
       danger: "\u30ad\u30b1\u30f3",
       newBest: "\u30d9\u30b9\u30c8\u66f4\u65b0",
+      settings: "\u8a2d\u5b9a",
+      close: "\u9589\u3058\u308b",
+      language: "\u8a00\u8a9e",
+      sound: "\u97f3",
+      haptics: "\u632f\u52d5",
+      reducedMotion: "\u6f14\u51fa\u3092\u63a7\u3048\u308b",
+      resetData: "\u30c7\u30fc\u30bf\u521d\u671f\u5316",
+      resetDataConfirm: "\u7aef\u672b\u5185\u306e\u30d7\u30ec\u30a4\u30e4\u30fc\u30c7\u30fc\u30bf\u3001\u30b9\u30b3\u30a2\u3001\u30e9\u30f3\u30ad\u30f3\u30b0\u3001\u8a2d\u5b9a\u3092\u521d\u671f\u5316\u3057\u307e\u3059\u304b\uff1f",
       pieceRabbit: "\u3046\u3055\u304e",
       pieceCat: "\u306d\u3053",
       pieceDog: "\u3044\u306c",
@@ -134,19 +194,290 @@
     { id: "seed-sora", name: "Sora", score: 5120 },
     { id: "seed-yui", name: "Yui", score: 3860 }
   ];
+  const SAVE_VERSION = 2;
+  const DEFAULT_SETTINGS = {
+    language: null,
+    sound: true,
+    haptics: true,
+    reducedMotion: false
+  };
+  const saveStore = createSaveStore();
   let currentLanguage = readPreferredLanguage();
 
-  function readPreferredLanguage() {
+  function createSaveStore() {
+    let data = readSavedState();
+
+    return {
+      get() {
+        return data;
+      },
+      setLanguage(language) {
+        data.settings.language = language === "ja" || language === "en" ? language : null;
+        writeSavedState(data);
+      },
+      setPlayer(player) {
+        data.player = sanitizePlayer(player, data.player);
+        writeSavedState(data);
+      },
+      setBestScore(score) {
+        data.bestScore = normalizeScore(score);
+        writeSavedState(data);
+      },
+      setLeaderboard(entries) {
+        data.leaderboard = sanitizeLeaderboard(entries);
+        writeSavedState(data);
+      },
+      setSettings(settings) {
+        data.settings = sanitizeSettings({ ...data.settings, ...settings });
+        writeSavedState(data);
+      },
+      reset(language = getDeviceLanguage()) {
+        data = createDefaultSave({ language });
+        writeSavedState(data);
+        clearLegacySaveData();
+        return data;
+      }
+    };
+  }
+
+  function readSavedState() {
     try {
-      const saved = window.localStorage.getItem(STORAGE_KEYS.language);
-      if (saved === "ja" || saved === "en") {
-        return saved;
+      const raw = window.localStorage.getItem(STORAGE_KEYS.appState);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const migrated = migrateSaveData(parsed);
+        writeSavedState(migrated);
+        clearLegacySaveData();
+        return migrated;
       }
     } catch (error) {
-      // Language choice is still available for this session.
+      preserveCorruptSave();
     }
 
+    const migrated = migrateLegacySaveData();
+    writeSavedState(migrated);
+    clearLegacySaveData();
+    return migrated;
+  }
+
+  function writeSavedState(data) {
+    try {
+      window.localStorage.setItem(STORAGE_KEYS.appState, JSON.stringify({
+        ...data,
+        updatedAt: new Date().toISOString()
+      }));
+    } catch (error) {
+      // The game can keep running with in-memory data if storage is unavailable.
+    }
+  }
+
+  function preserveCorruptSave() {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEYS.appState);
+      if (raw) {
+        const key = `${STORAGE_KEYS.corruptPrefix}-${Date.now().toString(36)}`;
+        window.localStorage.setItem(key, raw.slice(0, 8000));
+      }
+      window.localStorage.removeItem(STORAGE_KEYS.appState);
+    } catch (error) {
+      // Corrupt save recovery is best-effort.
+    }
+  }
+
+  function clearLegacySaveData() {
+    try {
+      window.localStorage.removeItem(STORAGE_KEYS.legacyBestScore);
+      window.localStorage.removeItem(STORAGE_KEYS.legacyPlayer);
+      window.localStorage.removeItem(STORAGE_KEYS.legacyLeaderboard);
+      window.localStorage.removeItem(STORAGE_KEYS.legacyLanguage);
+    } catch (error) {
+      // Removing old split keys is best-effort.
+    }
+  }
+
+  function migrateSaveData(input) {
+    if (!input || typeof input !== "object") {
+      return createDefaultSave();
+    }
+
+    const fallback = createDefaultSave();
+
+    if (input.version === SAVE_VERSION) {
+      return sanitizeSaveData(input, fallback);
+    }
+
+    return sanitizeSaveData({
+      version: SAVE_VERSION,
+      player: input.player,
+      bestScore: input.bestScore ?? input.scores?.best,
+      leaderboard: input.leaderboard,
+      settings: input.settings,
+      createdAt: input.createdAt || fallback.createdAt
+    }, fallback);
+  }
+
+  function migrateLegacySaveData() {
+    const fallback = createDefaultSave();
+    const legacy = {
+      version: SAVE_VERSION,
+      player: fallback.player,
+      bestScore: 0,
+      leaderboard: DEFAULT_LEADERBOARD,
+      settings: { ...DEFAULT_SETTINGS },
+      createdAt: fallback.createdAt
+    };
+
+    try {
+      const savedPlayer = JSON.parse(window.localStorage.getItem(STORAGE_KEYS.legacyPlayer) || "null");
+      if (savedPlayer) {
+        legacy.player = savedPlayer;
+      }
+    } catch (error) {
+      // Ignore malformed legacy profile data.
+    }
+
+    try {
+      const savedLeaderboard = JSON.parse(window.localStorage.getItem(STORAGE_KEYS.legacyLeaderboard) || "null");
+      if (Array.isArray(savedLeaderboard)) {
+        legacy.leaderboard = savedLeaderboard;
+      }
+    } catch (error) {
+      // Ignore malformed legacy leaderboard data.
+    }
+
+    try {
+      legacy.bestScore = Number(window.localStorage.getItem(STORAGE_KEYS.legacyBestScore)) || 0;
+    } catch (error) {
+      // Ignore malformed legacy score data.
+    }
+
+    try {
+      const language = window.localStorage.getItem(STORAGE_KEYS.legacyLanguage);
+      if (language === "ja" || language === "en") {
+        legacy.settings.language = language;
+      }
+    } catch (error) {
+      // Ignore malformed legacy language data.
+    }
+
+    return sanitizeSaveData(legacy, fallback);
+  }
+
+  function sanitizeSaveData(input, fallback = createDefaultSave()) {
+    const player = sanitizePlayer(input.player, fallback.player);
+    const leaderboard = sanitizeLeaderboard(input.leaderboard);
+    const bestScore = Math.max(normalizeScore(input.bestScore), getLeaderboardScore(leaderboard, player.id));
+
+    return {
+      version: SAVE_VERSION,
+      createdAt: typeof input.createdAt === "string" ? input.createdAt : fallback.createdAt,
+      updatedAt: typeof input.updatedAt === "string" ? input.updatedAt : fallback.updatedAt,
+      player,
+      bestScore,
+      leaderboard: sanitizeLeaderboard([
+        ...leaderboard,
+        {
+          id: player.id,
+          name: player.name,
+          score: bestScore
+        }
+      ]),
+      settings: sanitizeSettings(input.settings)
+    };
+  }
+
+  function createDefaultSave(overrides = {}) {
+    const now = new Date().toISOString();
+    const player = {
+      id: generatePlayerId(),
+      name: "Guest"
+    };
+
+    return {
+      version: SAVE_VERSION,
+      createdAt: now,
+      updatedAt: now,
+      player,
+      bestScore: 0,
+      leaderboard: sanitizeLeaderboard(DEFAULT_LEADERBOARD),
+      settings: sanitizeSettings({ ...DEFAULT_SETTINGS, ...overrides })
+    };
+  }
+
+  function sanitizeSettings(settings = {}) {
+    return {
+      language: settings.language === "ja" || settings.language === "en" ? settings.language : null,
+      sound: settings.sound !== false,
+      haptics: settings.haptics !== false,
+      reducedMotion: settings.reducedMotion === true
+    };
+  }
+
+  function sanitizePlayer(player, fallback = null) {
+    const safeFallback = fallback || { id: generatePlayerId(), name: "Guest" };
+    const id = typeof player?.id === "string" && player.id.trim()
+      ? player.id.trim().slice(0, 80)
+      : safeFallback.id;
+
+    return {
+      id,
+      name: normalizePlayerNameValue(player?.name ?? safeFallback.name)
+    };
+  }
+
+  function sanitizeLeaderboard(entries) {
+    const byId = new Map();
+
+    for (const entry of Array.isArray(entries) ? entries : DEFAULT_LEADERBOARD) {
+      if (!entry || typeof entry.id !== "string" || !entry.id.trim()) {
+        continue;
+      }
+
+      const id = entry.id.trim().slice(0, 80);
+      const score = normalizeScore(entry.score);
+      const name = normalizePlayerNameValue(entry.name);
+      const previous = byId.get(id);
+
+      if (!previous || score > previous.score) {
+        byId.set(id, { id, name, score });
+      }
+    }
+
+    return [...byId.values()]
+      .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
+      .slice(0, 50);
+  }
+
+  function normalizePlayerNameValue(value) {
+    const normalized = String(value || "Guest").replace(/\s+/g, " ").trim().slice(0, 12);
+    return normalized || "Guest";
+  }
+
+  function normalizeScore(value) {
+    const score = Math.floor(Number(value) || 0);
+    return Math.max(0, Math.min(999999999, score));
+  }
+
+  function getLeaderboardScore(leaderboard, playerId) {
+    const entry = leaderboard.find((item) => item.id === playerId);
+    return entry ? entry.score : 0;
+  }
+
+  function generatePlayerId() {
+    return `local-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  function getDeviceLanguage() {
     return window.navigator && /^ja\b/i.test(window.navigator.language) ? "ja" : "en";
+  }
+
+  function readPreferredLanguage() {
+    const saved = saveStore.get().settings.language;
+    if (saved === "ja" || saved === "en") {
+      return saved;
+    }
+
+    return getDeviceLanguage();
   }
 
   function t(key) {
@@ -163,11 +494,7 @@
   function applyLanguage(language) {
     currentLanguage = language === "ja" ? "ja" : "en";
 
-    try {
-      window.localStorage.setItem(STORAGE_KEYS.language, currentLanguage);
-    } catch (error) {
-      // Saving the language preference is optional.
-    }
+    saveStore.setLanguage(currentLanguage);
 
     document.documentElement.lang = currentLanguage;
     document.title = t("title");
@@ -188,45 +515,126 @@
       button.classList.toggle("language-switch__button--active", isActive);
       button.setAttribute("aria-pressed", String(isActive));
     }
+
+    for (const button of settingsLanguageButtons) {
+      const isActive = button.dataset.settingsLang === currentLanguage;
+      button.classList.toggle("settings-panel__lang-button--active", isActive);
+      button.setAttribute("aria-pressed", String(isActive));
+    }
   }
 
+  function createAudioManager() {
+    let audioContext = null;
+
+    function getContext() {
+      if (!saveStore.get().settings.sound) {
+        return null;
+      }
+
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) {
+          return null;
+        }
+        if (!audioContext) {
+          audioContext = new AudioContextClass();
+        }
+        if (audioContext.state === "suspended") {
+          audioContext.resume();
+        }
+        return audioContext;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function tone(frequency, duration, type = "sine", volume = 0.05, delay = 0) {
+      const context = getContext();
+      if (!context) {
+        return;
+      }
+
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const start = context.currentTime + delay;
+      const end = start + duration;
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(volume, start + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, end);
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(start);
+      oscillator.stop(end + 0.02);
+    }
+
+    return {
+      play(name) {
+        if (name === "drop") {
+          tone(260, 0.06, "triangle", 0.035);
+          return;
+        }
+        if (name === "merge") {
+          tone(420, 0.07, "sine", 0.045);
+          tone(620, 0.09, "sine", 0.035, 0.055);
+          return;
+        }
+        if (name === "best") {
+          tone(580, 0.08, "triangle", 0.04);
+          tone(780, 0.12, "triangle", 0.035, 0.075);
+          return;
+        }
+        if (name === "gameOver") {
+          tone(240, 0.12, "sawtooth", 0.026);
+          tone(170, 0.18, "sawtooth", 0.022, 0.1);
+        }
+      },
+      unlock() {
+        getContext();
+      }
+    };
+  }
+
+  const audioManager = createAudioManager();
+
   const GAME = {
-    width: canvas.width,
-    height: canvas.height,
-    innerLeft: canvas.width * 0.06,
-    innerRight: canvas.width * 0.94,
-    topY: canvas.height * 0.12,
-    floorY: canvas.height * 0.94,
-    spawnY: canvas.height * 0.18,
-    warningLineY: canvas.height * 0.28,
-    gravity: 0.26 * SCALE,
+    width: LOGICAL.game.width,
+    height: LOGICAL.game.height,
+    innerLeft: LOGICAL.game.width * 0.06,
+    innerRight: LOGICAL.game.width * 0.94,
+    topY: LOGICAL.game.height * 0.12,
+    floorY: LOGICAL.game.height * 0.94,
+    spawnY: LOGICAL.game.height * 0.18,
+    warningLineY: LOGICAL.game.height * 0.28,
+    gravity: 0.29 * SCALE,
     airDrag: 0.9985,
     wallBounce: 0.04,
-    floorBounce: 0.08,
-    collisionBounce: 0.035,
-    settleFriction: 0.986,
+    floorBounce: 0.06,
+    collisionBounce: 0.045,
+    settleFriction: 0.988,
     angularDrag: 0.992,
     squishRecovery: 0.86,
-    mergeImpulse: -2.2 * SCALE,
+    mergeImpulse: -1.85 * SCALE,
     mergeEffectMs: 360,
     scorePopupMs: 760,
-    dangerLineGrace: 8 * SCALE,
+    dangerLineGrace: 10 * SCALE,
     keyboardAimStep: 18 * SCALE,
     keyboardAimSpeed: 0.42 * SCALE,
-    spawnCooldownMs: 480,
-    gameOverMs: 1600,
+    spawnCooldownMs: 420,
+    gameOverMs: 2200,
     comboWindowMs: 1550,
     milestoneEffectMs: 1300,
     fixedDt: 1000 / 60,
     substeps: 2,
-    solverPasses: 6
+    solverPasses: 7
   };
 
-  const MERGE_SCORES = [50, 150, 300, 500, 750, 1050, 1400, 1800, 2250, 2750];
+  const MERGE_SCORES = [40, 120, 260, 480, 760, 1120, 1520, 1980, 2520, 3200];
   const PIECES = [
     {
       name: "rabbit",
-      radius: 16.5 * SCALE,
+      radius: 16 * SCALE,
       score: 50,
       base: "#f7c6d1",
       rim: "#df8fa1",
@@ -241,7 +649,7 @@
     },
     {
       name: "cat",
-      radius: 23.5 * SCALE,
+      radius: 22.5 * SCALE,
       score: 150,
       base: "#f6bf45",
       rim: "#d8942e",
@@ -256,7 +664,7 @@
     },
     {
       name: "dog",
-      radius: 30 * SCALE,
+      radius: 29 * SCALE,
       score: 300,
       base: "#e7b36d",
       rim: "#a66835",
@@ -271,7 +679,7 @@
     },
     {
       name: "penguin",
-      radius: 37 * SCALE,
+      radius: 36 * SCALE,
       score: 500,
       base: "#71c996",
       rim: "#4f9f78",
@@ -286,7 +694,7 @@
     },
     {
       name: "elephant",
-      radius: 46 * SCALE,
+      radius: 44.5 * SCALE,
       score: 750,
       base: "#a9d2e8",
       rim: "#78abc9",
@@ -301,7 +709,7 @@
     },
     {
       name: "panda",
-      radius: 56 * SCALE,
+      radius: 54 * SCALE,
       score: 1050,
       base: "#fff8ef",
       rim: "#7855a3",
@@ -316,7 +724,7 @@
     },
     {
       name: "otter",
-      radius: 66 * SCALE,
+      radius: 64 * SCALE,
       score: 1400,
       base: "#b87836",
       rim: "#8a5428",
@@ -331,7 +739,7 @@
     },
     {
       name: "hedgehog",
-      radius: 78 * SCALE,
+      radius: 75 * SCALE,
       score: 1800,
       base: "#fff0d0",
       rim: "#9b6b42",
@@ -346,7 +754,7 @@
     },
     {
       name: "fox",
-      radius: 91 * SCALE,
+      radius: 88 * SCALE,
       score: 2250,
       base: "#f28b36",
       rim: "#c76325",
@@ -361,7 +769,7 @@
     },
     {
       name: "koala",
-      radius: 106 * SCALE,
+      radius: 102 * SCALE,
       score: 2750,
       base: "#cdd0d4",
       rim: "#9fa5ad",
@@ -376,7 +784,7 @@
     },
     {
       name: "lion",
-      radius: 122 * SCALE,
+      radius: 118 * SCALE,
       score: 3300,
       base: "#f5cf52",
       rim: "#91591f",
@@ -447,7 +855,46 @@
     }
 
     randomSpawnType() {
-      return Math.floor(Math.random() * 4);
+      const weights = this.getSpawnWeights();
+      const total = weights.reduce((sum, entry) => sum + entry.weight, 0);
+      let roll = Math.random() * total;
+
+      for (const entry of weights) {
+        roll -= entry.weight;
+        if (roll <= 0) {
+          return entry.typeIndex;
+        }
+      }
+
+      return 0;
+    }
+
+    getSpawnWeights() {
+      if (this.score >= 12000 || this.highestTypeReached >= 6) {
+        return [
+          { typeIndex: 0, weight: 34 },
+          { typeIndex: 1, weight: 31 },
+          { typeIndex: 2, weight: 22 },
+          { typeIndex: 3, weight: 10 },
+          { typeIndex: 4, weight: 3 }
+        ];
+      }
+
+      if (this.score >= 4200 || this.highestTypeReached >= 4) {
+        return [
+          { typeIndex: 0, weight: 38 },
+          { typeIndex: 1, weight: 32 },
+          { typeIndex: 2, weight: 21 },
+          { typeIndex: 3, weight: 9 }
+        ];
+      }
+
+      return [
+        { typeIndex: 0, weight: 46 },
+        { typeIndex: 1, weight: 32 },
+        { typeIndex: 2, weight: 16 },
+        { typeIndex: 3, weight: 6 }
+      ];
     }
 
     clampSpawnX(typeIndex, x) {
@@ -495,6 +942,7 @@
       this.recordHighestType(typeIndex);
       this.lastDropAt = now;
       this.vibrate(4);
+      audioManager.play("drop");
       this.renderHud();
     }
 
@@ -634,7 +1082,7 @@
     mergeTouchingPairs() {
       const merges = [];
       const locked = new Set();
-      const mergeTolerance = 1.5;
+      const mergeTolerance = 3.4 * SCALE;
 
       for (let i = 0; i < this.balls.length; i += 1) {
         const a = this.balls[i];
@@ -714,6 +1162,7 @@
         this.effects.push(this.createMergeEffect(mergeX, mergeY, nextTypeIndex, awardedScore, isNewBest));
         this.addMergeJuice(piece.radius);
         this.vibrate(10);
+        audioManager.play(isNewBest ? "best" : "merge");
       }
 
       this.balls = this.balls.filter((ball) => !removedIds.has(ball.id));
@@ -739,7 +1188,7 @@
 
       this.highestTypeReached = typeIndex;
 
-      if (x !== null && y !== null) {
+      if (x !== null && y !== null && !saveStore.get().settings.reducedMotion) {
         this.milestone = {
           typeIndex,
           x,
@@ -779,73 +1228,29 @@
 
       this.bestScore = this.score;
       this.bestPulse = 1;
-
-      try {
-        window.localStorage.setItem(STORAGE_KEYS.bestScore, String(this.bestScore));
-      } catch (error) {
-        // Local storage can be unavailable in private browsing; the run can continue.
-      }
-
+      saveStore.setBestScore(this.bestScore);
       this.savePlayerScore(this.bestScore);
       return true;
     }
 
     readBestScore() {
-      try {
-        return Number(window.localStorage.getItem(STORAGE_KEYS.bestScore)) || 0;
-      } catch (error) {
-        return 0;
-      }
+      return saveStore.get().bestScore;
     }
 
     readPlayer() {
-      try {
-        const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEYS.player) || "null");
-        if (saved && typeof saved.id === "string" && typeof saved.name === "string") {
-          return {
-            id: saved.id,
-            name: this.normalizePlayerName(saved.name)
-          };
-        }
-      } catch (error) {
-        // Fall through to a new local player.
-      }
-
-      const player = {
-        id: `local-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-        name: "Guest"
-      };
-      this.writePlayer(player);
-      return player;
+      return saveStore.get().player;
     }
 
     writePlayer(player) {
-      try {
-        window.localStorage.setItem(STORAGE_KEYS.player, JSON.stringify(player));
-      } catch (error) {
-        // Local profile saving is optional.
-      }
+      saveStore.setPlayer(player);
     }
 
     readLeaderboard() {
-      try {
-        const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEYS.leaderboard) || "null");
-        if (Array.isArray(saved)) {
-          return this.normalizeLeaderboard(saved);
-        }
-      } catch (error) {
-        // Fall through to seed scores.
-      }
-
-      return this.normalizeLeaderboard(DEFAULT_LEADERBOARD);
+      return saveStore.get().leaderboard;
     }
 
     writeLeaderboard() {
-      try {
-        window.localStorage.setItem(STORAGE_KEYS.leaderboard, JSON.stringify(this.leaderboard));
-      } catch (error) {
-        // Ranking display can still work for this session.
-      }
+      saveStore.setLeaderboard(this.leaderboard);
     }
 
     normalizeLeaderboard(entries) {
@@ -871,8 +1276,7 @@
     }
 
     normalizePlayerName(value) {
-      const normalized = String(value || "Guest").replace(/\s+/g, " ").trim().slice(0, 12);
-      return normalized || "Guest";
+      return normalizePlayerNameValue(value);
     }
 
     getPlayerBestScore() {
@@ -882,6 +1286,8 @@
 
     savePlayerScore(score) {
       const nextScore = Math.max(score, this.getPlayerBestScore());
+      this.bestScore = Math.max(this.bestScore, nextScore);
+      saveStore.setBestScore(this.bestScore);
       const withoutPlayer = this.leaderboard.filter((entry) => entry.id !== this.player.id);
       this.leaderboard = this.normalizeLeaderboard([
         ...withoutPlayer,
@@ -901,13 +1307,28 @@
       this.renderHud();
     }
 
+    updateSettings(settings) {
+      saveStore.setSettings(settings);
+      this.renderSettings();
+    }
+
+    resetSavedData() {
+      const data = saveStore.reset(currentLanguage);
+      this.player = data.player;
+      this.leaderboard = data.leaderboard;
+      this.bestScore = data.bestScore;
+      this.reset();
+      this.renderSettings();
+    }
+
     createMergeEffect(x, y, typeIndex, score, isNewBest = false) {
       const piece = PIECES[typeIndex];
       const colors = [piece.base, piece.belly, piece.blush, "#fff7d6"];
-      const particleCount = 16;
+      const reducedMotion = saveStore.get().settings.reducedMotion;
+      const particleCount = reducedMotion ? 6 : 16;
       const particles = Array.from({ length: particleCount }, (_, index) => {
         const angle = (Math.PI * 2 * index) / particleCount + Math.random() * 0.22;
-        const speed = piece.radius * (0.045 + Math.random() * 0.025);
+        const speed = piece.radius * (reducedMotion ? 0.025 : 0.045 + Math.random() * 0.025);
         return {
           x,
           y,
@@ -934,6 +1355,11 @@
     }
 
     addMergeJuice(radius) {
+      if (saveStore.get().settings.reducedMotion) {
+        this.mergeFlash = Math.min(0.28, this.mergeFlash + 0.12);
+        return;
+      }
+
       this.shakePower = Math.min(7 * SCALE, this.shakePower + Math.max(1.2 * SCALE, radius * 0.035));
       this.mergeFlash = Math.min(1, this.mergeFlash + 0.45);
     }
@@ -1008,6 +1434,7 @@
       if (triggeredGameOver) {
         this.gameOver = true;
         this.vibrate([18, 36, 24]);
+        audioManager.play("gameOver");
         this.renderOverlayStats();
         this.showOverlay();
       }
@@ -1030,6 +1457,28 @@
       this.renderEvolutionRing();
       this.renderOverlayStats();
       this.renderComboBadge();
+      this.renderSettings();
+    }
+
+    renderSettings() {
+      const settings = saveStore.get().settings;
+      if (settingsBestValue) {
+        settingsBestValue.textContent = this.formatScore(this.bestScore);
+      }
+      for (const button of settingsLanguageButtons) {
+        const isActive = button.dataset.settingsLang === currentLanguage;
+        button.classList.toggle("settings-panel__lang-button--active", isActive);
+        button.setAttribute("aria-pressed", String(isActive));
+      }
+      if (soundToggle) {
+        soundToggle.checked = settings.sound;
+      }
+      if (hapticsToggle) {
+        hapticsToggle.checked = settings.haptics;
+      }
+      if (reducedMotionToggle) {
+        reducedMotionToggle.checked = settings.reducedMotion;
+      }
     }
 
     renderLeaderboard() {
@@ -1069,27 +1518,27 @@
     }
 
     renderNextPiece() {
-      nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+      nextCtx.clearRect(0, 0, LOGICAL.next.width, LOGICAL.next.height);
       const piece = PIECES[this.previewType];
       const scale = Math.min(1, 32 / piece.radius);
 
       this.drawPiece(
         nextCtx,
-        nextCanvas.width / 2,
-        nextCanvas.height / 2,
+        LOGICAL.next.width / 2,
+        LOGICAL.next.height / 2,
         piece.radius * scale,
         piece.color,
         piece.name
       );
 
       if (queueCtx && queueCanvas) {
-        queueCtx.clearRect(0, 0, queueCanvas.width, queueCanvas.height);
+        queueCtx.clearRect(0, 0, LOGICAL.queue.width, LOGICAL.queue.height);
         const queuedPiece = PIECES[this.nextType];
         const queuedScale = Math.min(1, 18 / queuedPiece.radius);
         this.drawPiece(
           queueCtx,
-          queueCanvas.width / 2,
-          queueCanvas.height / 2,
+          LOGICAL.queue.width / 2,
+          LOGICAL.queue.height / 2,
           queuedPiece.radius * queuedScale,
           queuedPiece.color,
           queuedPiece.name
@@ -1127,9 +1576,9 @@
     }
 
     renderEvolutionRing() {
-      evolutionCtx.clearRect(0, 0, evolutionCanvas.width, evolutionCanvas.height);
-      const centerX = evolutionCanvas.width / 2;
-      const centerY = evolutionCanvas.height / 2;
+      evolutionCtx.clearRect(0, 0, LOGICAL.evolution.width, LOGICAL.evolution.height);
+      const centerX = LOGICAL.evolution.width / 2;
+      const centerY = LOGICAL.evolution.height / 2;
       const ringRadius = 58;
 
       evolutionCtx.save();
@@ -2545,6 +2994,10 @@
     }
 
     vibrate(pattern) {
+      if (!saveStore.get().settings.haptics) {
+        return;
+      }
+
       try {
         if (window.navigator && typeof window.navigator.vibrate === "function") {
           window.navigator.vibrate(pattern);
@@ -2571,6 +3024,7 @@
   };
   let activeTouchPointerId = null;
   let suppressNextClick = false;
+  configureAllCanvases();
   applyLanguage(currentLanguage);
   game.renderHud();
 
@@ -2599,6 +3053,7 @@
       return;
     }
 
+    audioManager.unlock();
     updatePointer(event.clientX);
     game.dropCurrentPiece(performance.now());
   }
@@ -2615,6 +3070,8 @@
     if (event.target.closest("button")) {
       return;
     }
+
+    audioManager.unlock();
 
     if (event.pointerType === "touch") {
       event.preventDefault();
@@ -2648,6 +3105,16 @@
     if (activeTouchPointerId === event.pointerId) {
       activeTouchPointerId = null;
     }
+  }
+
+  function setSettingsPanelOpen(open) {
+    if (!settingsPanel) {
+      return;
+    }
+
+    settingsPanel.classList.toggle("settings-panel--hidden", !open);
+    settingsPanel.setAttribute("aria-hidden", String(!open));
+    game.renderSettings();
   }
 
   function loop(timestamp) {
@@ -2689,6 +3156,13 @@
     });
   }
 
+  for (const button of settingsLanguageButtons) {
+    button.addEventListener("click", () => {
+      applyLanguage(button.dataset.settingsLang);
+      game.renderHud();
+    });
+  }
+
   restartButton.addEventListener("click", () => {
     game.reset();
   });
@@ -2696,6 +3170,49 @@
   overlayRestartButton.addEventListener("click", () => {
     game.reset();
   });
+
+  if (settingsButton) {
+    settingsButton.addEventListener("click", () => {
+      audioManager.unlock();
+      setSettingsPanelOpen(settingsPanel?.classList.contains("settings-panel--hidden"));
+    });
+  }
+
+  if (settingsCloseButton) {
+    settingsCloseButton.addEventListener("click", () => {
+      setSettingsPanelOpen(false);
+    });
+  }
+
+  if (hapticsToggle) {
+    hapticsToggle.addEventListener("change", () => {
+      game.updateSettings({ haptics: hapticsToggle.checked });
+    });
+  }
+
+  if (soundToggle) {
+    soundToggle.addEventListener("change", () => {
+      game.updateSettings({ sound: soundToggle.checked });
+      if (soundToggle.checked) {
+        audioManager.unlock();
+        audioManager.play("merge");
+      }
+    });
+  }
+
+  if (reducedMotionToggle) {
+    reducedMotionToggle.addEventListener("change", () => {
+      game.updateSettings({ reducedMotion: reducedMotionToggle.checked });
+    });
+  }
+
+  if (resetDataButton) {
+    resetDataButton.addEventListener("click", () => {
+      if (window.confirm(t("resetDataConfirm"))) {
+        game.resetSavedData();
+      }
+    });
+  }
 
   if (playerForm) {
     playerForm.addEventListener("submit", (event) => {
@@ -2744,9 +3261,17 @@
     keyState.right = false;
   });
 
-  window.addEventListener("resize", () => {
+  function handleViewportChange() {
+    configureAllCanvases();
+    game.renderHud();
     game.draw(performance.now());
-  });
+  }
+
+  window.addEventListener("resize", handleViewportChange);
+  window.addEventListener("orientationchange", handleViewportChange);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", handleViewportChange);
+  }
 
   game.reset();
   window.requestAnimationFrame(loop);
