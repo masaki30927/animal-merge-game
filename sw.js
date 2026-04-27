@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260428-3";
+const CACHE_VERSION = "20260428-4";
 const CACHE_NAME = `animal-merge-v${CACHE_VERSION}`;
 const PRECACHE = [
   "./",
