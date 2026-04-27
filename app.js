@@ -108,6 +108,9 @@
       finalScore: "Final Score",
       topAnimal: "Top Animal",
       combo: "Combo",
+      comboGreat: "GREAT",
+      comboFantastic: "FANTASTIC",
+      comboAmazing: "AMAZING",
       danger: "Danger",
       newBest: "New Best",
       settings: "Settings",
@@ -162,6 +165,9 @@
       finalScore: "\u6700\u7d42\u30b9\u30b3\u30a2",
       topAnimal: "\u6700\u5927\u3069\u3046\u3076\u3064",
       combo: "\u30b3\u30f3\u30dc",
+      comboGreat: "\u30b0\u30ec\u30fc\u30c8",
+      comboFantastic: "\u3059\u3054\u3044",
+      comboAmazing: "\u3055\u3044\u3053\u3046",
       danger: "\u30ad\u30b1\u30f3",
       newBest: "\u30d9\u30b9\u30c8\u66f4\u65b0",
       settings: "\u8a2d\u5b9a",
@@ -608,14 +614,16 @@
     }
 
     return {
-      play(name) {
+      play(name, options = {}) {
+        const combo = Math.max(1, Math.floor(options.combo || 1));
+        const pitchMul = Math.min(2, 1 + (combo - 1) * 0.08);
         if (name === "drop") {
           tone(260, 0.06, "triangle", 0.035);
           return;
         }
         if (name === "merge") {
-          tone(420, 0.07, "sine", 0.045);
-          tone(620, 0.09, "sine", 0.035, 0.055);
+          tone(420 * pitchMul, 0.07, "sine", 0.045);
+          tone(620 * pitchMul, 0.09, "sine", 0.035, 0.055);
           return;
         }
         if (name === "best") {
@@ -1189,6 +1197,9 @@
         return;
       }
 
+      this.registerCombo();
+      const comboCount = this.comboCount;
+
       const removedIds = new Set();
 
       for (const [a, b] of merges) {
@@ -1228,10 +1239,10 @@
         this.score += awardedScore;
         const isNewBest = this.updateBestScore();
         this.scorePulse = 1;
-        this.effects.push(this.createMergeEffect(mergeX, mergeY, nextTypeIndex, awardedScore, isNewBest));
-        this.addMergeJuice(piece.radius);
-        this.vibrate(10);
-        audioManager.play(isNewBest ? "best" : "merge");
+        this.effects.push(this.createMergeEffect(mergeX, mergeY, nextTypeIndex, awardedScore, isNewBest, comboCount));
+        this.addMergeJuice(piece.radius, comboCount);
+        this.vibrate(comboCount >= 4 ? [12, 8, 14] : 10);
+        audioManager.play(isNewBest ? "best" : "merge", { combo: comboCount });
       }
 
       this.balls = this.balls.filter((ball) => !removedIds.has(ball.id));
@@ -1242,7 +1253,6 @@
         }
       }
 
-      this.registerCombo(merges.length);
       this.renderHud();
     }
 
@@ -1280,12 +1290,8 @@
       return `${Math.max(1, this.highestTypeReached + 1)} / ${PIECES.length}`;
     }
 
-    registerCombo(mergeCount) {
-      if (mergeCount <= 0) {
-        return;
-      }
-
-      this.comboCount = this.comboTimerMs > 0 ? this.comboCount + mergeCount : mergeCount;
+    registerCombo() {
+      this.comboCount = this.comboTimerMs > 0 ? this.comboCount + 1 : 1;
       this.comboTimerMs = GAME.comboWindowMs;
       this.comboFlash = this.comboCount > 1 ? 1 : 0;
     }
@@ -1390,20 +1396,21 @@
       this.renderSettings();
     }
 
-    createMergeEffect(x, y, typeIndex, score, isNewBest = false) {
+    createMergeEffect(x, y, typeIndex, score, isNewBest = false, comboCount = 1) {
       const piece = PIECES[typeIndex];
       const colors = [piece.base, piece.belly, piece.blush, "#fff7d6"];
       const reducedMotion = saveStore.get().settings.reducedMotion;
-      const particleCount = reducedMotion ? 6 : 16;
+      const comboBoost = reducedMotion ? 1 : Math.min(2.4, 1 + Math.max(0, comboCount - 1) * 0.18);
+      const particleCount = reducedMotion ? 6 : Math.min(40, Math.round(16 * comboBoost));
       const particles = Array.from({ length: particleCount }, (_, index) => {
         const angle = (Math.PI * 2 * index) / particleCount + Math.random() * 0.22;
-        const speed = piece.radius * (reducedMotion ? 0.025 : 0.045 + Math.random() * 0.025);
+        const speed = piece.radius * (reducedMotion ? 0.025 : (0.045 + Math.random() * 0.025) * comboBoost);
         return {
           x,
           y,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed - piece.radius * 0.006,
-          size: Math.max(3, piece.radius * (0.08 + Math.random() * 0.045)),
+          size: Math.max(3, piece.radius * (0.08 + Math.random() * 0.045) * (reducedMotion ? 1 : Math.min(1.5, comboBoost))),
           color: colors[index % colors.length],
           shape: index % 5 === 0 ? "heart" : index % 3 === 0 ? "star" : "puff"
         };
@@ -1423,14 +1430,15 @@
       };
     }
 
-    addMergeJuice(radius) {
+    addMergeJuice(radius, comboCount = 1) {
       if (saveStore.get().settings.reducedMotion) {
         this.mergeFlash = Math.min(0.28, this.mergeFlash + 0.12);
         return;
       }
 
-      this.shakePower = Math.min(7 * SCALE, this.shakePower + Math.max(1.2 * SCALE, radius * 0.035));
-      this.mergeFlash = Math.min(1, this.mergeFlash + 0.45);
+      const comboBoost = Math.min(2.2, 1 + Math.max(0, comboCount - 1) * 0.18);
+      this.shakePower = Math.min(11 * SCALE, this.shakePower + Math.max(1.2 * SCALE, radius * 0.035) * comboBoost);
+      this.mergeFlash = Math.min(1, this.mergeFlash + 0.45 * Math.min(1.6, comboBoost));
     }
 
     updateJuice(deltaMs) {
@@ -1647,14 +1655,32 @@
 
       const visible = this.comboCount > 1 && this.comboTimerMs > 0;
       comboBadge.classList.toggle("combo-badge--hidden", !visible);
+      comboBadge.classList.remove("combo-badge--great", "combo-badge--fantastic", "combo-badge--amazing");
 
       if (!visible) {
         comboBadge.style.transform = "";
         return;
       }
 
-      comboBadge.textContent = `${this.comboCount} ${t("combo")}`;
-      comboBadge.style.transform = `translateX(-50%) scale(${1 + this.comboFlash * 0.12})`;
+      let labelKey = "combo";
+      let tier = null;
+      if (this.comboCount >= 8) {
+        labelKey = "comboAmazing";
+        tier = "amazing";
+      } else if (this.comboCount >= 6) {
+        labelKey = "comboFantastic";
+        tier = "fantastic";
+      } else if (this.comboCount >= 4) {
+        labelKey = "comboGreat";
+        tier = "great";
+      }
+      if (tier) {
+        comboBadge.classList.add(`combo-badge--${tier}`);
+      }
+
+      comboBadge.textContent = `${this.comboCount} ${t(labelKey)}`;
+      const tierBoost = tier === "amazing" ? 0.18 : tier === "fantastic" ? 0.1 : tier === "great" ? 0.04 : 0;
+      comboBadge.style.transform = `translateX(-50%) scale(${1 + this.comboFlash * 0.14 + tierBoost})`;
     }
 
     renderEvolutionRing() {
