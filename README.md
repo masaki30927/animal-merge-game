@@ -9,6 +9,18 @@ Open `index.html` in a desktop browser.
 
 If your browser blocks local file access for some reason, serve the folder with a tiny static server instead.
 
+## Install as a PWA
+
+When the game is served over HTTPS (for example via GitHub Pages), it ships with a web app manifest and a service worker so it can be installed and played offline.
+
+- On Chrome / Edge: open the deployed URL, then choose **Install app** from the address-bar menu (or the "+" icon).
+- On iOS Safari: open the deployed URL, then **Share → Add to Home Screen**.
+- On Android Chrome: a banner usually appears, or pick **Install app** from the menu.
+
+The service worker (`sw.js`) caches `index.html`, the versioned `styles.css` / `app.js`, and `manifest.webmanifest` on first load, so subsequent launches work offline. To ship a new build, bump the cache-buster query string and the `CACHE_VERSION` constant in `sw.js` to the same value; the worker deletes older caches on activation.
+
+The Capacitor Android build is unaffected because the registration script skips `capacitor:` origins and `window.Capacitor` is detected at runtime.
+
 ## Publish
 
 To publish with GitHub Pages:

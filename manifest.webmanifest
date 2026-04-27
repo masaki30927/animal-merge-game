@@ -1,0 +1,45 @@
+{
+  "name": "Animal Merge Game",
+  "short_name": "Animal Merge",
+  "description": "Drop cute animal plushies, merge matching animals, and grow the biggest animal you can.",
+  "lang": "en",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#ead995",
+  "background_color": "#efe7d7",
+  "categories": ["games", "puzzle"],
+  "icons": [
+    {
+      "src": "./android/app/src/main/res/mipmap-mdpi/ic_launcher.png",
+      "sizes": "48x48",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./android/app/src/main/res/mipmap-hdpi/ic_launcher.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./android/app/src/main/res/mipmap-xhdpi/ic_launcher.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
