@@ -1,3 +1,7 @@
+html {
+  overscroll-behavior: contain;
+}
+
 :root {
   color-scheme: light;
   --stage-bg: #efe7d7;
@@ -24,6 +28,8 @@ body {
   margin: 0;
   min-height: 100dvh;
   overflow: hidden;
+  overscroll-behavior: contain;
+  -webkit-tap-highlight-color: transparent;
   font-family: "Trebuchet MS", "Segoe UI", sans-serif;
   color: var(--text);
   background:
@@ -623,6 +629,43 @@ canvas {
   display: none;
 }
 
+.settings-panel:not(.settings-panel--hidden) {
+  animation: settings-panel-pop 180ms ease;
+}
+
+.settings-backdrop:not(.settings-backdrop--hidden) {
+  animation: settings-backdrop-fade 180ms ease;
+}
+
+@keyframes settings-panel-pop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes settings-backdrop-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-panel:not(.settings-panel--hidden),
+  .settings-backdrop:not(.settings-backdrop--hidden),
+  .combo-badge {
+    animation: none;
+    transition: none;
+  }
+}
+
 .settings-panel__header,
 .settings-panel__row,
 .settings-panel__stat,
@@ -1033,5 +1076,33 @@ h2 {
 
   .language-switch {
     top: calc(max(8px, env(safe-area-inset-top)) + 18px);
+  }
+}
+
+@media (max-height: 540px) and (orientation: landscape) {
+  .ranking-card,
+  .evolution-card,
+  .mascot-cloud {
+    display: none;
+  }
+
+  .game-column {
+    top: max(8px, env(safe-area-inset-top));
+    width: min(calc(100dvw - 200px), calc((100dvh - 80px) * 480 / 620), 320px);
+  }
+
+  .score-bubble,
+  .next-bubble {
+    width: min(28dvw, 130px);
+    height: 56px;
+  }
+
+  .control-strip {
+    min-height: 30px;
+    font-size: 0.74rem;
+  }
+
+  .language-switch {
+    top: calc(max(6px, env(safe-area-inset-top)));
   }
 }
