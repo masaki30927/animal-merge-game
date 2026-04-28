@@ -1,3 +1,6 @@
+# Editor / tooling state
+.claude/
+
 # Dependencies
 node_modules/
 
