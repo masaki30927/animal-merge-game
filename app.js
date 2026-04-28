@@ -676,8 +676,8 @@
   const GAME = {
     width: LOGICAL.game.width,
     height: LOGICAL.game.height,
-    innerLeft: LOGICAL.game.width * 0.06,
-    innerRight: LOGICAL.game.width * 0.94,
+    innerLeft: LOGICAL.game.width * 0.11,
+    innerRight: LOGICAL.game.width * 0.89,
     topY: LOGICAL.game.height * 0.12,
     floorY: LOGICAL.game.height * 0.94,
     spawnY: LOGICAL.game.height * 0.18,
@@ -699,7 +699,6 @@
     spawnCooldownMs: 420,
     gameOverMs: 2200,
     gameOverTrapGraceMs: 1200,
-    gameOverSettleVelocity: 0.6 * SCALE,
     milestoneEffectMs: 1300,
     fixedDt: 1000 / 60,
     substeps: 2,
@@ -1032,7 +1031,6 @@
         radius,
         mergeLock: false,
         warningTimer: 0,
-        trapTimer: 0,
         ageMs: 0,
         rotation: 0,
         angularVelocity: 0,
@@ -1249,7 +1247,6 @@
           radius: piece.radius,
           mergeLock: true,
           warningTimer: 0,
-          trapTimer: 0,
           ageMs: 0,
           rotation: ((a.rotation || 0) + (b.rotation || 0)) * 0.5,
           angularVelocity: ((a.angularVelocity || 0) + (b.angularVelocity || 0)) * 0.5,
@@ -1504,7 +1501,6 @@
 
     updateWarningState(deltaMs) {
       let triggeredGameOver = false;
-      const settleVel = GAME.gameOverSettleVelocity;
 
       for (const ball of this.balls) {
         if (ball.y - ball.radius > GAME.warningLineY + GAME.dangerLineGrace) {
@@ -1512,24 +1508,18 @@
         }
 
         const aboveLine = ball.y - ball.radius <= GAME.warningLineY;
-        const settled = Math.abs(ball.vy) < settleVel && ball.contactCount > 0;
+        const inContact = ball.contactCount > 0;
 
-        if (aboveLine && ball.hasClearedWarningLine) {
+        if (aboveLine && inContact) {
           ball.warningTimer += deltaMs;
-          if (ball.warningTimer >= GAME.gameOverMs) {
+          const limit = ball.hasClearedWarningLine
+            ? GAME.gameOverMs
+            : GAME.gameOverTrapGraceMs;
+          if (ball.warningTimer >= limit) {
             triggeredGameOver = true;
           }
         } else {
           ball.warningTimer = 0;
-        }
-
-        if (aboveLine && settled && !ball.hasClearedWarningLine) {
-          ball.trapTimer = (ball.trapTimer || 0) + deltaMs;
-          if (ball.trapTimer >= GAME.gameOverTrapGraceMs) {
-            triggeredGameOver = true;
-          }
-        } else {
-          ball.trapTimer = 0;
         }
       }
 
@@ -2016,9 +2006,13 @@
 
     drawDangerWarning(now) {
       const dangerProgress = this.balls.reduce((max, ball) => {
-        const warning = ball.warningTimer / GAME.gameOverMs;
-        const trap = (ball.trapTimer || 0) / GAME.gameOverTrapGraceMs;
-        return Math.max(max, warning, trap);
+        if (ball.warningTimer <= 0) {
+          return max;
+        }
+        const limit = ball.hasClearedWarningLine
+          ? GAME.gameOverMs
+          : GAME.gameOverTrapGraceMs;
+        return Math.max(max, ball.warningTimer / limit);
       }, 0);
 
       if (dangerProgress <= 0) {
@@ -3504,6 +3498,15 @@
   if (hapticsToggle) {
     hapticsToggle.addEventListener("change", () => {
       game.updateSettings({ haptics: hapticsToggle.checked });
+      if (!hapticsToggle.checked) {
+        try {
+          if (window.navigator && typeof window.navigator.vibrate === "function") {
+            window.navigator.vibrate(0);
+          }
+        } catch (error) {
+          // Cancelling an in-flight vibration is best-effort.
+        }
+      }
     });
   }
 
