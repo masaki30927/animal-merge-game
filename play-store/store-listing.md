@@ -72,5 +72,5 @@ This is the source of truth for the Google Play "Data safety" form. Everything b
 ## Contact
 
 - Support email: pooh30927@gmail.com
-- Privacy policy URL: `https://masaki30927.github.io/<REPO_NAME>/privacy.html`
-  <!-- TODO: replace <REPO_NAME> with the actual GitHub repository slug before final submission. The same value must match the GitHub Pages site that hosts privacy.html. -->
+- Privacy policy URL: `https://masaki30927.github.io/animal-merge-game/privacy.html`
+  <!-- This URL becomes live once GitHub Pages is enabled for the masaki30927/animal-merge-game repository. Verify it loads from a phone before pasting it into the Play Console. -->

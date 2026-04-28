@@ -22,9 +22,7 @@ Work top-to-bottom. Anything checked has been verified in the repo at the time t
 - [x] `play-store/store-listing.md` has the Data Safety summary table (single source of truth)
 - [x] `privacy.html` enumerates every piece of localStorage data and removes template hedges
 - [x] Support email confirmed real: `pooh30927@gmail.com`
-- [ ] **Repository slug filled in** wherever `<REPO_NAME>` or `------` is still a placeholder:
-  - `play-store/store-listing.md` privacy URL line
-  - any future references in `manifest.webmanifest` or `index.html` open-graph metas if you add them
+- [x] Repository slug `animal-merge-game` filled into `play-store/store-listing.md` privacy URL line
 - [ ] `privacy.html` is publicly served at the URL referenced in `store-listing.md` (GitHub Pages or any HTTPS host) and reachable from a phone on cellular
 
 ### Build artifacts
