@@ -1,32 +1,149 @@
 # Google Play Release Checklist
 
-## Before Upload
+Work top-to-bottom. Anything checked has been verified in the repo at the time the checkbox flipped. Anything still empty needs your hands or the Play Console.
 
-- [x] Replace the support email placeholder in `privacy.html`
-- [x] Publish `privacy.html` on GitHub Pages or another public HTTPS URL
-- [ ] Confirm app name, package name, and screenshots
+## Code & Build
 
-### Keystore safety
+### Foundation (already in main)
 
-- [x] `android/keystore/` and `android/signing.properties` are excluded by `.gitignore`
-- [ ] `android/keystore/animal-merge-upload-key.jks` backed up to at least two places (password manager + encrypted drive)
-- [ ] `android/signing.properties` backed up alongside the keystore
-- [ ] Verified the backup by restoring it on a clean machine and successfully running `bundleRelease`
-- [ ] Recovery procedure for accidental key commit reviewed in `README.md` (Keystore Backup section)
+- [x] `.gitignore` excludes signing keys, build outputs, Gradle/IDE artifacts, and OS noise
+- [x] `android/keystore/` and `android/signing.properties` confirmed untracked
+- [x] AndroidManifest.xml pins MainActivity to `android:screenOrientation="portrait"`
+- [x] `index.html` viewport meta declares `viewport-fit=cover` for safe-area on notched devices
+- [x] PWA shipped: `manifest.webmanifest`, `sw.js`, theme-color (light + dark), service worker registration that skips Capacitor
+- [x] `scripts/copy-web-assets.mjs` includes `manifest.webmanifest`, `sw.js`, and `icons/` so `cap sync` picks them up
+- [x] WebAudio unlock catches resume() rejection and primes a silent buffer for iOS WKWebView
+- [x] `prefers-reduced-motion` is auto-detected on first launch and after Reset Data
+- [x] Settings dialog is keyboard-reachable (focus trap, Esc, backdrop tap, focus return)
+- [x] `aria-live` region announces new-best and game over
 
-## Build
+### Listing copy and policy
 
-- [x] Run the signed AAB build
-- [x] Confirm output file exists at `android/app/build/outputs/bundle/release/app-release.aab`
-- [x] Confirm AAB is signed
+- [x] `play-store/store-listing.md` has the Data Safety summary table (single source of truth)
+- [x] `privacy.html` enumerates every piece of localStorage data and removes template hedges
+- [x] Support email confirmed real: `pooh30927@gmail.com`
+- [ ] **Repository slug filled in** wherever `<REPO_NAME>` or `------` is still a placeholder:
+  - `play-store/store-listing.md` privacy URL line
+  - any future references in `manifest.webmanifest` or `index.html` open-graph metas if you add them
+- [ ] `privacy.html` is publicly served at the URL referenced in `store-listing.md` (GitHub Pages or any HTTPS host) and reachable from a phone on cellular
+
+### Build artifacts
+
+- [x] Signed AAB produced: `android/app/build/outputs/bundle/release/app-release.aab`
+- [x] SHA-256 of the AAB recorded for the current build (current: `4EA650E9…12333016` for versionCode 1)
+- [x] AAB is signed (`signReleaseBundle` ran during last build)
+- [ ] **Backup the keystore and signing properties** to two encrypted locations (password manager + encrypted drive) and restore-test on a clean machine with `bundleRelease`. Procedure in [`README.md`](../README.md#keystore-backup)
+
+## Assets
+
+The full size / format / count rules live in [`asset-spec.md`](asset-spec.md). Treat that file as the spec, this checklist as the tracker.
+
+- [x] [`asset-spec.md`](asset-spec.md) created with every Play asset requirement and a phone screenshot shot list
+- [x] [`icons/README.md`](../icons/README.md) explains the PWA icon contract; manifest references `./icons/icon-192.png` and `./icons/icon-512.png`
+- [ ] **Real `icons/icon-192.png` (192×192 PNG, maskable safe zone)** dropped into the repo
+- [ ] **Real `icons/icon-512.png` (512×512 PNG, maskable safe zone)** dropped into the repo
+- [ ] **Play Store listing icon** at 512×512, 32-bit PNG with alpha, ≤1 MB — saved under `play-store/assets/icon-512.png`
+- [ ] **Feature graphic** at 1024×500, JPG or 24-bit PNG, ≤1 MB — saved under `play-store/assets/feature-graphic.png`
+- [ ] **Phone screenshots** — minimum 2, target 4–6 — captured per the shot list in `asset-spec.md`, saved under `play-store/assets/screenshots/`
+- [ ] (Optional) 7-inch tablet screenshots
+- [ ] (Optional) 10-inch tablet screenshots
+- [ ] (Optional) 30-second YouTube promo video
 
 ## Play Console
 
-- [ ] Create the app in Google Play Console
-- [ ] Fill in the app access / ads / data safety forms
-- [ ] Add store listing text from `play-store/store-listing.md`
-- [ ] Upload icon, screenshots, and feature graphic (specs and shot list in [`asset-spec.md`](asset-spec.md))
-- [ ] Add privacy policy URL
-- [ ] Upload `app-release.aab`
-- [ ] Start internal or closed testing
+These steps live entirely inside the Play Console UI. Tick them as you go on Play Console; the order below matches the Console's left-side tabs.
+
+### App setup
+
+- [ ] App created in Play Console with package name `com.masaki30927.animalmerge`
+- [ ] **Default language** set to English (US); Japanese (Japan) added as a localized listing
+- [ ] **App access** form: declare that the app has no login wall (full functionality without account)
+- [ ] **Ads** form: declare "No ads"
+- [ ] **Content rating** questionnaire completed (target: Everyone)
+- [ ] **Target audience** form: select the appropriate age bracket; declare that the app is not designed for children only
+- [ ] **News** declaration: not a news app
+- [ ] **COVID-19 contact tracing**: not applicable
+- [ ] **Data safety** form filled using `play-store/store-listing.md` Data Safety Summary as the source of truth (no data collected, no data shared, no SDKs)
+- [ ] **Government apps**: not applicable
+- [ ] **Financial features**: not applicable
+- [ ] **Health apps**: not applicable
+
+### Store listing
+
+- [ ] App name (EN): `Animal Merge Game`
+- [ ] App name (JA): `どうぶつマージゲーム`
+- [ ] Short description (EN/JA) pasted from `play-store/store-listing.md`
+- [ ] Full description (EN/JA) pasted from `play-store/store-listing.md`
+- [ ] Category: Puzzle
+- [ ] Tags / search keywords reviewed
+- [ ] Contact: support email `pooh30927@gmail.com`, no phone number, no website (or repo Pages URL if you choose)
+- [ ] **Privacy policy URL** pasted (must match the deployed `privacy.html`)
+- [ ] App icon uploaded
+- [ ] Feature graphic uploaded
+- [ ] Phone screenshots uploaded (≥2)
+- [ ] Tablet screenshots uploaded (optional)
+- [ ] Promo video URL added (optional)
+
+### Release
+
+- [ ] AAB uploaded to **Internal testing** track (versionCode and versionName visible in the Play Console match the local build)
+- [ ] Internal testing release notes filled in (EN + JA)
+- [ ] Internal testers added (email list or testing group)
+- [ ] Internal testing rollout started; opt-in URL captured for testers
+- [ ] Promote the build to **Closed testing** once internal testing passes
+- [ ] Promote to **Production** once closed testing passes
 - [ ] Submit for review
+
+## Versioning rules
+
+The Play Console burns each `versionCode` permanently as soon as it is uploaded. You cannot upload the same `versionCode` twice, even after deletion. Bump strictly.
+
+- **`versionCode`** — single positive integer in [`android/app/build.gradle`](../android/app/build.gradle). Increment by exactly **1** every time you upload a new AAB to the Play Console, including hotfix re-uploads. Never reuse, never decrement.
+- **`versionName`** — SemVer string in `android/app/build.gradle` (e.g. `1.0.0`, `1.0.1`, `1.1.0`). Bump as appropriate to the change set:
+  - patch (`1.0.x`) for bug-fix-only releases
+  - minor (`1.x.0`) for new features that don't break flow
+  - major (`x.0.0`) reserved for big rewrites or removals
+- **Bump timing** — edit `versionCode` / `versionName` **before** running `npm run cap:sync`, so the values flow through the cap sync into the manifest. Then run `bundleRelease`.
+- **Current values** — `versionCode = 1`, `versionName = "1.0"`.
+
+Suggested next bump: when uploading the first replacement AAB, bump to `versionCode = 2` and `versionName = "1.0.1"` (or higher if the build includes new features).
+
+## Release-stage gating
+
+Each track in the Play Console has its own pass criteria. Don't promote a build until the prior stage's criteria are green.
+
+### 1. Internal testing (1–10 testers)
+
+- Audience: yourself plus a handful of trusted testers (different OS versions, different screen sizes if possible).
+- Distribution: Play Console internal-testing opt-in URL or email invite list.
+- What you watch:
+  - Install succeeds end-to-end via the Play opt-in link, no manifest or signing errors at install time.
+  - First launch on a real device matches what you see locally; portrait lock holds; HUD does not clip the canvas; safe-area padding is correct on a notched device.
+  - Run [`qa-checklist.md`](qa-checklist.md) on at least one device. Every PASS / FAIL noted.
+  - Pre-launch report (Play Console runs this automatically) shows no crashes or ANRs on the test devices it spins up.
+- Pass criteria: zero install errors, no crashes in pre-launch, all High-priority items in `qa-checklist.md` pass.
+
+### 2. Closed testing (10–100 testers)
+
+- Audience: friends and family circle, or a small Discord / community group; opt-in via email list or group.
+- Distribution: Play Console closed-testing track.
+- What you watch:
+  - Crash-free user rate stays above ~99% in the Play Console "Vitals" tab.
+  - Initial review feedback is collected (subjective fun, control feel, perceived performance on low-end devices).
+  - Battery and thermal behavior on at least one mid-range Android (5+ minutes of play should not heat noticeably).
+  - Any Med-priority items in `qa-checklist.md` that previously passed still pass.
+- Pass criteria: ≥7 days on this track with zero P0 bugs reported and crash-free rate ≥99%.
+
+### 3. Production (public)
+
+- Audience: everyone on the Play Store.
+- Distribution: staged rollout — start at 10% or 20%, expand over 3–7 days while watching Vitals.
+- What you watch:
+  - Crash-free user rate, ANR rate, install success rate, daily active users.
+  - Reviews / ratings (set up Play Console email alerts for first 1- and 2-star ratings).
+  - Privacy policy and Data Safety form remain accurate; revise if the app ever starts touching new data.
+- Pass criteria for full rollout: ≥7 days at the staged percentage with crash-free rate ≥99% and no policy or content rating issues raised.
+
+## Done means
+
+When every box above is ticked, the app is in "Production" with a staged rollout, the keystore is in two safe places, and `qa-checklist.md` was passed end-to-end on a real device. That is the bar for shipping; below that is "submitted but not yet released."
