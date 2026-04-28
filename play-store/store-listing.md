@@ -4,7 +4,7 @@
 
 - App name (EN): Animal Merge Game
 - App name (JA): どうぶつマージゲーム
-- Package name: `com.masaki30927.animalmerge`
+- Package name: `com.masaki30927.animalmergegame`
 - Category: Puzzle
 - Content rating target: Everyone
 

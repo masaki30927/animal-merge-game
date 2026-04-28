@@ -53,7 +53,7 @@ These steps live entirely inside the Play Console UI. Tick them as you go on Pla
 
 ### App setup
 
-- [ ] App created in Play Console with package name `com.masaki30927.animalmerge`
+- [ ] App created in Play Console with package name `com.masaki30927.animalmergegame`
 - [ ] **Default language** set to English (US); Japanese (Japan) added as a localized listing
 - [ ] **App access** form: declare that the app has no login wall (full functionality without account)
 - [ ] **Ads** form: declare "No ads"

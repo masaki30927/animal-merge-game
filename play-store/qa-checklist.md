@@ -173,7 +173,7 @@ Fill this in at the start of every run.
 ### 20. Store identity sanity — ストア準拠
 
 - **Steps**: Settings → Apps → Animal Merge Game → App info.
-- **Expected**: Package name reads `com.masaki30927.animalmerge`. Version line matches `versionName` in `android/app/build.gradle`. Permission list shows only `INTERNET` (and any system-default like access network state).
+- **Expected**: Package name reads `com.masaki30927.animalmergegame`. Version line matches `versionName` in `android/app/build.gradle`. Permission list shows only `INTERNET` (and any system-default like access network state).
 - **Result**: ☐ PASS ☐ FAIL ☐ N/A
 - **Notes**:
 - **If it fails**: A wrong build slipped in. Compare the SHA-256 in your release notes to `Get-FileHash` of the AAB you uploaded.

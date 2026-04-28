@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Animal Merge Game — Asset Generator</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 32px;
+      background: #f3ecdc;
+      font-family: "Segoe UI", "Hiragino Sans", sans-serif;
+      color: #4d443b;
+    }
+    h1 { margin: 0 0 24px; }
+    p { margin: 0 0 16px; color: #6b5a4b; line-height: 1.6; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      margin-top: 24px;
+    }
+    .card {
+      background: #fffaf1;
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(82, 70, 56, 0.1);
+    }
+    .card h3 { margin: 0 0 6px; }
+    .card .meta { font-size: 0.8rem; color: #8a7a68; margin-bottom: 12px; }
+    canvas {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      border-radius: 12px;
+      background: #efe7d7;
+      margin-bottom: 12px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      border: 0;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #f5e9bd, #d8c7ad);
+      color: #65574b;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    button:hover { filter: brightness(0.96); }
+    .placement {
+      margin-top: 32px;
+      padding: 16px;
+      background: rgba(255, 250, 241, 0.9);
+      border-radius: 12px;
+      font-size: 0.88rem;
+      line-height: 1.7;
+    }
+    code {
+      background: rgba(179, 111, 47, 0.1);
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-family: Consolas, monospace;
+    }
+    .download-all {
+      margin-top: 16px;
+      padding: 12px 24px;
+      background: linear-gradient(180deg, #ee9986, #c47363);
+      color: white;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Animal Merge Game — Asset Generator</h1>
+  <p>Download each PNG and drop it into the path below the card. Re-runs are deterministic, so re-generating produces byte-identical files.</p>
+
+  <button class="download-all" id="downloadAll" type="button">Download all (4 files)</button>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Icon 192</h3>
+      <div class="meta">192 × 192 — PWA install / home screen</div>
+      <canvas id="icon192" width="192" height="192"></canvas>
+      <button data-target="icon192" data-name="icon-192.png" type="button">Download icon-192.png</button>
+    </div>
+    <div class="card">
+      <h3>Icon 512</h3>
+      <div class="meta">512 × 512 — PWA + Play Store listing icon</div>
+      <canvas id="icon512" width="512" height="512"></canvas>
+      <button data-target="icon512" data-name="icon-512.png" type="button">Download icon-512.png</button>
+    </div>
+    <div class="card">
+      <h3>Play Store icon</h3>
+      <div class="meta">512 × 512 — same image, separate filename for Play Store assets folder</div>
+      <canvas id="playIcon" width="512" height="512"></canvas>
+      <button data-target="playIcon" data-name="play-icon-512.png" type="button">Download play-icon-512.png</button>
+    </div>
+    <div class="card">
+      <h3>Feature graphic</h3>
+      <div class="meta">1024 × 500 — top of the Play Store listing</div>
+      <canvas id="feature" width="1024" height="500"></canvas>
+      <button data-target="feature" data-name="feature-graphic.png" type="button">Download feature-graphic.png</button>
+    </div>
+  </div>
+
+  <div class="placement">
+    Once downloaded, place each PNG here:
+    <ul>
+      <li><code>icon-192.png</code> → <code>icons/icon-192.png</code></li>
+      <li><code>icon-512.png</code> → <code>icons/icon-512.png</code></li>
+      <li><code>play-icon-512.png</code> → <code>play-store/assets/icon-512.png</code> (rename on save)</li>
+      <li><code>feature-graphic.png</code> → <code>play-store/assets/feature-graphic.png</code></li>
+    </ul>
+  </div>
+
+  <script>
+    const PALETTE = {
+      bgTop: "#fff4d6",
+      bgBottom: "#f1c8b6",
+      rabbitBase: "#f7c6d1",
+      rabbitRim: "#df8fa1",
+      rabbitBelly: "#fff4ef",
+      rabbitBlush: "#ef7f96",
+      rabbitNose: "#ee812f",
+      rabbitEye: "#3d2a1f",
+      catBase: "#f6bf45",
+      catRim: "#d8942e",
+      dogBase: "#e7b36d",
+      dogRim: "#a66835",
+      penguinBase: "#71c996",
+      penguinRim: "#4f9f78",
+      titleColor: "#5a3a22",
+      subtitleColor: "#a06b3a",
+      sparkle: "#ffe7a3"
+    };
+
+    function drawIconBackground(ctx, size) {
+      const grad = ctx.createRadialGradient(size * 0.4, size * 0.32, size * 0.1, size * 0.5, size * 0.5, size * 0.6);
+      grad.addColorStop(0, "#fff7e0");
+      grad.addColorStop(0.7, PALETTE.bgTop);
+      grad.addColorStop(1, PALETTE.bgBottom);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+      ctx.lineWidth = size * 0.012;
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size / 2 - size * 0.025, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    function drawRabbit(ctx, cx, cy, radius) {
+      ctx.save();
+
+      // Ears
+      ctx.fillStyle = PALETTE.rabbitRim;
+      for (const dir of [-1, 1]) {
+        ctx.beginPath();
+        ctx.ellipse(
+          cx + dir * radius * 0.36,
+          cy - radius * 0.86,
+          radius * 0.18,
+          radius * 0.42,
+          dir * 0.18,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      }
+      ctx.fillStyle = PALETTE.rabbitBlush;
+      for (const dir of [-1, 1]) {
+        ctx.beginPath();
+        ctx.ellipse(
+          cx + dir * radius * 0.36,
+          cy - radius * 0.86,
+          radius * 0.09,
+          radius * 0.28,
+          dir * 0.18,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      }
+
+      // Body
+      const bodyGrad = ctx.createRadialGradient(
+        cx - radius * 0.32,
+        cy - radius * 0.38,
+        radius * 0.08,
+        cx,
+        cy,
+        radius
+      );
+      bodyGrad.addColorStop(0, "#fff0f3");
+      bodyGrad.addColorStop(0.6, PALETTE.rabbitBase);
+      bodyGrad.addColorStop(1, PALETTE.rabbitRim);
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Belly
+      ctx.fillStyle = PALETTE.rabbitBelly;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + radius * 0.22, radius * 0.5, radius * 0.36, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Cheeks
+      ctx.fillStyle = PALETTE.rabbitBlush;
+      ctx.globalAlpha = 0.62;
+      for (const dir of [-1, 1]) {
+        ctx.beginPath();
+        ctx.arc(cx + dir * radius * 0.42, cy + radius * 0.12, radius * 0.13, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      // Eyes
+      ctx.fillStyle = PALETTE.rabbitEye;
+      for (const dir of [-1, 1]) {
+        ctx.beginPath();
+        ctx.ellipse(
+          cx + dir * radius * 0.22,
+          cy - radius * 0.06,
+          radius * 0.07,
+          radius * 0.1,
+          0,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      }
+      // Eye shine
+      ctx.fillStyle = "#ffffff";
+      for (const dir of [-1, 1]) {
+        ctx.beginPath();
+        ctx.arc(
+          cx + dir * radius * 0.22 + radius * 0.025,
+          cy - radius * 0.09,
+          radius * 0.025,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      }
+
+      // Nose
+      ctx.fillStyle = PALETTE.rabbitNose;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy + radius * 0.06);
+      ctx.lineTo(cx - radius * 0.06, cy + radius * 0.13);
+      ctx.lineTo(cx + radius * 0.06, cy + radius * 0.13);
+      ctx.closePath();
+      ctx.fill();
+
+      // Smile
+      ctx.strokeStyle = PALETTE.rabbitEye;
+      ctx.lineWidth = radius * 0.025;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(cx - radius * 0.08, cy + radius * 0.2);
+      ctx.quadraticCurveTo(cx, cy + radius * 0.28, cx + radius * 0.08, cy + radius * 0.2);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawSparkle(ctx, x, y, size, color) {
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.translate(x, y);
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const angle = (Math.PI * 2 * i) / 8;
+        const r = i % 2 === 0 ? size : size * 0.4;
+        const px = Math.cos(angle) * r;
+        const py = Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawIcon(canvas) {
+      const size = canvas.width;
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, size, size);
+
+      drawIconBackground(ctx, size);
+
+      const cx = size * 0.5;
+      const cy = size * 0.55;
+      const radius = size * 0.27;
+      drawRabbit(ctx, cx, cy, radius);
+
+      // Sparkles around the rabbit
+      drawSparkle(ctx, size * 0.18, size * 0.22, size * 0.04, PALETTE.sparkle);
+      drawSparkle(ctx, size * 0.84, size * 0.3, size * 0.05, PALETTE.sparkle);
+      drawSparkle(ctx, size * 0.78, size * 0.78, size * 0.035, PALETTE.sparkle);
+      drawSparkle(ctx, size * 0.22, size * 0.84, size * 0.04, PALETTE.sparkle);
+    }
+
+    function drawSimplePlush(ctx, cx, cy, radius, base, rim, belly) {
+      ctx.save();
+      const grad = ctx.createRadialGradient(
+        cx - radius * 0.3,
+        cy - radius * 0.35,
+        radius * 0.1,
+        cx,
+        cy,
+        radius
+      );
+      grad.addColorStop(0, "#ffffff");
+      grad.addColorStop(0.5, base);
+      grad.addColorStop(1, rim);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = belly;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + radius * 0.2, radius * 0.46, radius * 0.32, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eyes
+      ctx.fillStyle = "#3d2a1f";
+      for (const dir of [-1, 1]) {
+        ctx.beginPath();
+        ctx.arc(cx + dir * radius * 0.22, cy - radius * 0.04, radius * 0.07, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Smile
+      ctx.strokeStyle = "#3d2a1f";
+      ctx.lineWidth = radius * 0.04;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(cx - radius * 0.09, cy + radius * 0.2);
+      ctx.quadraticCurveTo(cx, cy + radius * 0.3, cx + radius * 0.09, cy + radius * 0.2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawFeatureGraphic(canvas) {
+      const ctx = canvas.getContext("2d");
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      // Background
+      const bg = ctx.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#fff4d6");
+      bg.addColorStop(0.5, "#f4dbc6");
+      bg.addColorStop(1, "#e7c0d4");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+
+      // Decorative dots
+      ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
+      for (let i = 0; i < 60; i++) {
+        const x = (i * 137) % w;
+        const y = (i * 89) % h;
+        const r = ((i * 13) % 4) + 2;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Plush stack on the left
+      const baseX = w * 0.22;
+      const baseY = h * 0.78;
+      drawSimplePlush(ctx, baseX - 70, baseY, 60, PALETTE.dogBase, PALETTE.dogRim, "#fff0c9");
+      drawSimplePlush(ctx, baseX + 70, baseY - 10, 70, PALETTE.catBase, PALETTE.catRim, "#fff0bd");
+      drawSimplePlush(ctx, baseX, baseY - 110, 80, PALETTE.penguinBase, PALETTE.penguinRim, "#fff7db");
+      drawSimplePlush(ctx, baseX + 30, baseY - 220, 55, PALETTE.rabbitBase, PALETTE.rabbitRim, PALETTE.rabbitBelly);
+
+      // Title
+      ctx.fillStyle = PALETTE.titleColor;
+      ctx.font = "900 88px 'Segoe UI', 'Hiragino Sans', sans-serif";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Animal Merge", w * 0.5, h * 0.4);
+      ctx.fillStyle = PALETTE.subtitleColor;
+      ctx.font = "700 56px 'Segoe UI', 'Hiragino Sans', sans-serif";
+      ctx.fillText("Game", w * 0.5, h * 0.58);
+
+      // Japanese subtitle
+      ctx.fillStyle = "#7a5a3a";
+      ctx.font = "600 28px 'Hiragino Sans', 'Yu Gothic', sans-serif";
+      ctx.fillText("どうぶつマージゲーム", w * 0.5, h * 0.78);
+
+      // Sparkles
+      drawSparkle(ctx, w * 0.62, h * 0.18, 14, PALETTE.sparkle);
+      drawSparkle(ctx, w * 0.92, h * 0.28, 18, PALETTE.sparkle);
+      drawSparkle(ctx, w * 0.86, h * 0.62, 12, PALETTE.sparkle);
+      drawSparkle(ctx, w * 0.5, h * 0.92, 10, PALETTE.sparkle);
+    }
+
+    drawIcon(document.getElementById("icon192"));
+    drawIcon(document.getElementById("icon512"));
+    drawIcon(document.getElementById("playIcon"));
+    drawFeatureGraphic(document.getElementById("feature"));
+
+    function downloadCanvas(canvas, name) {
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }, "image/png");
+    }
+
+    document.querySelectorAll("button[data-target]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const canvas = document.getElementById(button.dataset.target);
+        downloadCanvas(canvas, button.dataset.name);
+      });
+    });
+
+    document.getElementById("downloadAll").addEventListener("click", () => {
+      const buttons = document.querySelectorAll("button[data-target]");
+      buttons.forEach((button, index) => {
+        setTimeout(() => button.click(), index * 400);
+      });
+    });
+  </script>
+</body>
+</html>
